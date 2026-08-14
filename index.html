@@ -1,0 +1,1845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sai Gayatri Industries – Business Manager</title>
+    <meta name="description" content="Sales, Stock and Purchase Management System for Sai Gayatri Industries">
+    
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Chart.js for beautiful analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- SheetJS for exporting real Excel files -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation (Desktop) -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon logo-mark-wrap">
+                    <img src="brand-logo.svg" alt="Sai Gayatri Industries logo" class="brand-logo-image">
+                </div>
+                <div class="brand-text">
+                    <h1>Sai Gayatri</h1>
+                    <p>Industries</p>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" data-target="dashboard">
+                    <i class="ph ph-squares-four"></i> Dashboard
+                </button>
+                <button class="nav-item" data-target="sales">
+                    <i class="ph ph-shopping-cart"></i> Sales Data
+                </button>
+                <button class="nav-item" data-target="preorders">
+                    <i class="ph ph-receipt"></i> Orders & Booking
+                </button>
+                <button class="nav-item" data-target="customers">
+                    <i class="ph ph-users"></i> Customers / Users
+                </button>
+                <button class="nav-item" data-target="stock">
+                    <i class="ph ph-package"></i> Stock Inventory
+                </button>
+                <button class="nav-item" data-target="orders">
+                    <i class="ph ph-truck"></i> Purchase Orders
+                </button>
+                <button class="nav-item" data-target="queries">
+                    <i class="ph ph-chat-teardrop-text"></i> Queries & Quotes
+                </button>
+                <button class="nav-item" data-target="reports">
+                    <i class="ph ph-chart-bar"></i> Reports & Insights
+                </button>
+                <button class="nav-item" data-target="settings">
+                    <i class="ph ph-gear"></i> Settings
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn btn-outline btn-sm w-full theme-toggle" id="theme-toggle-btn">
+                    <i class="ph ph-sun" id="theme-icon"></i> <span id="theme-text">Light Mode</span>
+                </button>
+                <button class="btn btn-variant btn-sm w-full mt-2" onclick="exportSqlBackup()">
+                    <i class="ph ph-database"></i> Export SQL Backup
+                </button>
+                <button class="btn btn-danger btn-sm w-full mt-2" onclick="clearAllData()">
+                    <i class="ph ph-trash"></i> Delete All Data
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Top Sticky Header -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h2 id="page-title">Dashboard Overview</h2>
+                    <p class="tagline">Sai Gayatri Industries – Business Manager</p>
+                </div>
+                <div class="header-actions">
+                    <div class="header-order-search">
+                        <i class="ph ph-magnifying-glass search-icon"></i>
+                        <input type="text" id="header-order-search-input" placeholder="Search Order (e.g. ES000005)..." onkeyup="if(event.key==='Enter') searchOrderFromHeader()">
+                        <button class="btn btn-primary btn-xs" onclick="searchOrderFromHeader()">Search</button>
+                    </div>
+                    <div class="date-display" id="current-date">
+                        <i class="ph ph-calendar"></i> Monday, 20 July 2026
+                    </div>
+                </div>
+            </header>
+
+            <!-- Alerts Container (Real-time notifications) -->
+            <div id="alerts-container" class="alerts-container"></div>
+
+            <!-- SCREEN 1: HOME / DASHBOARD -->
+            <section id="view-dashboard" class="view active">
+                <!-- Business Profile Block -->
+                <div class="profile-card glass shadow-card mb-4">
+                    <div class="profile-header">
+                        <div class="profile-title-block">
+                            <i class="ph ph-factory profile-icon"></i>
+                            <div>
+                                <h3 id="display-biz-name">Sai Gayatri Industries</h3>
+                                <p id="display-biz-tagline" class="text-secondary text-sm">Paper Plates, Buffet Plates & Raw Materials Manufacturing</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline btn-sm" onclick="openModal('modal-profile')">
+                            <i class="ph ph-pencil-simple"></i> Edit Business Info
+                        </button>
+                    </div>
+                    <div class="profile-details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Address</span>
+                            <span class="detail-value" id="display-biz-address">Plot No. 42, Industrial Area, Phase-I, Hyderabad, TS, 500051</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Contact / GSTIN</span>
+                            <span class="detail-value" id="display-biz-contact">Email: contact@saigayatri.com | Ph: +91 98765 43210</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Summary Cards -->
+                <div class="dashboard-hero glass shadow-card mb-4">
+                    <div>
+                        <p class="eyebrow">Business overview</p>
+                        <h3>Operations dashboard for sales, orders, and customer enquiries</h3>
+                    </div>
+                    <div class="hero-metrics">
+                        <span><i class="ph ph-shopping-bag"></i> Active orders</span>
+                        <span><i class="ph ph-currency-inr"></i> Daily sales</span>
+                        <span><i class="ph ph-chat-teardrop-text"></i> Open quotes</span>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Bar -->
+                <div class="quick-actions-bar mb-4">
+                    <button class="btn btn-primary btn-md" onclick="quickNewSale()"><i class="ph ph-plus-circle"></i> New Sale</button>
+                    <button class="btn btn-secondary btn-md" onclick="quickNewOrder()"><i class="ph ph-handshake"></i> New Order</button>
+                    <button class="btn btn-variant btn-md" onclick="quickAddStock()"><i class="ph ph-package"></i> Add Stock</button>
+                    <button class="btn btn-outline btn-md" onclick="quickSearchUser()"><i class="ph ph-user-focus"></i> Search User</button>
+                </div>
+
+                <div class="kpi-grid kpi-grid-9">
+                    <div class="kpi-card glass shadow-card card-sales" onclick="switchTab('sales')">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">Total Sales Revenue</span>
+                            <div class="kpi-badge sales-badge"><i class="ph ph-trend-up"></i> Sales</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-total-sales">₹0</p>
+                            <p class="kpi-subtext" id="kpi-total-sales-count">0 transactions</p>
+                        </div>
+                        <div class="kpi-footer">Click to view Sales Log</div>
+                    </div>
+
+                    <div class="kpi-card glass shadow-card card-orders" onclick="switchTab('preorders')">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">Total Orders</span>
+                            <div class="kpi-badge PO-badge"><i class="ph ph-receipt"></i> Bookings</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-total-orders">0</p>
+                            <p class="kpi-subtext" id="kpi-total-orders-val">₹0 value</p>
+                        </div>
+                        <div class="kpi-footer">Click to view Customer Orders</div>
+                    </div>
+
+                    <div class="kpi-card glass shadow-card card-pending" onclick="switchTab('customers')">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">Pending Payments</span>
+                            <div class="kpi-badge alert-badge"><i class="ph ph-clock"></i> Pending</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-pending-payments">₹0</p>
+                            <p class="kpi-subtext" id="kpi-pending-count">0 receivables</p>
+                        </div>
+                        <div class="kpi-footer">Click to view Customer Balances</div>
+                    </div>
+
+                    <div class="kpi-card glass shadow-card card-paid" onclick="switchTab('sales')">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">Paid Amount</span>
+                            <div class="kpi-badge sales-badge"><i class="ph ph-check-circle"></i> Collected</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-paid-amount">₹0</p>
+                            <p class="kpi-subtext">Received Collections</p>
+                        </div>
+                        <div class="kpi-footer">Collected Payments</div>
+                    </div>
+
+                    <div class="kpi-card glass shadow-card card-credit" onclick="switchTab('customers')">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">Outstanding / Credit</span>
+                            <div class="kpi-badge alert-badge"><i class="ph ph-warning-circle"></i> Credit</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-outstanding-credit">₹0</p>
+                            <p class="kpi-subtext">Uncollected Balances</p>
+                        </div>
+                        <div class="kpi-footer">View Outstanding Accounts</div>
+                    </div>
+
+                    <div class="kpi-card glass shadow-card card-stock" onclick="switchTab('stock')">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">Current Stock Units</span>
+                            <div class="kpi-badge stock-badge"><i class="ph ph-package"></i> Inventory</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-current-stock">0</p>
+                            <p class="kpi-subtext" id="kpi-stock-items">0 variants</p>
+                        </div>
+                        <div class="kpi-footer">Click to view Stock Tracker</div>
+                    </div>
+
+                    <div class="kpi-card glass shadow-card card-alerts" onclick="switchTab('stock', {filterLowStock: true})">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">Low Stock Alerts</span>
+                            <div class="kpi-badge alert-badge" id="kpi-alerts-badge"><i class="ph ph-warning"></i> Reorder</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-low-stock-count">0</p>
+                            <p class="kpi-subtext" id="kpi-low-stock-sub">Needs reorder</p>
+                        </div>
+                        <div class="kpi-footer">Click to view low stock items</div>
+                    </div>
+
+                    <div class="kpi-card glass shadow-card card-today" onclick="switchTab('sales')">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">Today's Sales</span>
+                            <div class="kpi-badge sales-badge"><i class="ph ph-calendar-check"></i> Today</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-today-sales">₹0</p>
+                            <p class="kpi-subtext" id="kpi-today-qty">0 units</p>
+                        </div>
+                        <div class="kpi-footer">Daily Performance</div>
+                    </div>
+
+                    <div class="kpi-card glass shadow-card card-month" onclick="switchTab('sales')">
+                        <div class="kpi-header-row">
+                            <span class="kpi-title">This Month's Sales</span>
+                            <div class="kpi-badge quote-badge"><i class="ph ph-chart-line-up"></i> Month</div>
+                        </div>
+                        <div class="kpi-value-row">
+                            <p class="kpi-value" id="kpi-month-sales">₹0</p>
+                            <p class="kpi-subtext" id="kpi-month-qty">Monthly Revenue</p>
+                        </div>
+                        <div class="kpi-footer">Monthly Performance</div>
+                    </div>
+                </div>
+
+                <!-- Navigation Quick Tiles -->
+                <h3 class="section-subtitle mt-4 mb-2">Quick Navigation Modules</h3>
+                <div class="quick-nav-grid">
+                    <button class="nav-tile glass ripple" onclick="switchTab('sales')">
+                        <div class="tile-icon icon-blue"><i class="ph ph-chart-line-up"></i></div>
+                        <div class="tile-text">
+                            <h4>Sales Data Entry</h4>
+                            <p>Log a sale, view billing history, search client notes</p>
+                        </div>
+                        <i class="ph ph-caret-right tile-arrow"></i>
+                    </button>
+                    <button class="nav-tile glass ripple" onclick="switchTab('stock')">
+                        <div class="tile-icon icon-green"><i class="ph ph-package"></i></div>
+                        <div class="tile-text">
+                            <h4>Stock Tracker</h4>
+                            <p>Monitor closing stock, update costs, adjust manual inventory</p>
+                        </div>
+                        <i class="ph ph-caret-right tile-arrow"></i>
+                    </button>
+                    <button class="nav-tile glass ripple" onclick="switchTab('orders')">
+                        <div class="tile-icon icon-purple"><i class="ph ph-shopping-bag"></i></div>
+                        <div class="tile-text">
+                            <h4>Purchase Orders</h4>
+                            <p>Track supplier invoices, handle inward stock arrivals</p>
+                        </div>
+                        <i class="ph ph-caret-right tile-arrow"></i>
+                    </button>
+                </div>
+
+                <!-- Charts & Visuals Grid -->
+                <div class="charts-grid mt-4">
+                    <div class="card glass shadow-card chart-container-card">
+                        <div class="card-header">
+                            <h3>Revenue & Profit Trend</h3>
+                            <select id="trend-timeframe" onchange="renderCharts()" class="select-sm">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                            </select>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card glass shadow-card chart-container-card">
+                        <div class="card-header">
+                            <h3>Stock Valuation by Category</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN 2: SALES DATA ENTRY & LOG -->
+            <section id="view-sales" class="view hidden">
+                <div class="sales-workspace">
+                    <!-- Quick Sales Form -->
+                    <div class="form-container glass shadow-card">
+                        <div class="form-title-row">
+                            <h3><i class="ph ph-plus-circle"></i> Log New Sale</h3>
+                            <button class="btn btn-outline btn-sm btn-variant" onclick="openModal('modal-new-item')">
+                                <i class="ph ph-sparkle"></i> Add New Product Variant
+                            </button>
+                        </div>
+                        <form id="sale-form">
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="sale-item">Select Product Variant <span class="required">*</span></label>
+                                    <select id="sale-item" required onchange="onSaleProductChange()">
+                                        <option value="" disabled selected>Choose a category + size + GSM...</option>
+                                        <!-- Populated dynamically -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sale-date">Sale Date <span class="required">*</span></label>
+                                    <input type="date" id="sale-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sale-qty">Plates/Qty Sold <span class="required">*</span></label>
+                                    <input type="number" id="sale-qty" min="1" placeholder="Quantity" required oninput="calcSaleFormTotals()">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="sale-customer-type">Customer Type</label>
+                                    <select id="sale-customer-type">
+                                        <option value="Walk-in Customer" selected>Walk-in Customer</option>
+                                        <option value="Existing Customer">Existing Customer</option>
+                                        <option value="New Customer">New Customer</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sale-customer-mobile">Customer Mobile</label>
+                                    <input type="tel" id="sale-customer-mobile" placeholder="e.g. 9876543210" oninput="lookupCustomerByMobile()">
+                                </div>
+                                <div class="form-group">
+                                    <label for="save-customer-details">Save Customer Details?</label>
+                                    <select id="save-customer-details">
+                                        <option value="No" selected>No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row" id="customer-detail-block" style="display: none;">
+                                <div class="form-group flex-2">
+                                    <label for="sale-customer-name">Customer Name</label>
+                                    <input type="text" id="sale-customer-name" placeholder="Customer Name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="sale-customer-gst">GST Number (Optional)</label>
+                                    <input type="text" id="sale-customer-gst" placeholder="GST Number">
+                                </div>
+                                <div class="form-group">
+                                    <label for="sale-customer-email">Email (Optional)</label>
+                                    <input type="email" id="sale-customer-email" placeholder="Email address">
+                                </div>
+                            </div>
+
+                            <div class="form-row" id="customer-address-block" style="display: none;">
+                                <div class="form-group flex-2">
+                                    <label for="sale-customer-address">Address (Optional)</label>
+                                    <input type="text" id="sale-customer-address" placeholder="Customer address">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="sale-cost-price">Cost Price / Unit (₹)</label>
+                                    <input type="number" id="sale-cost-price" step="0.01" min="0" placeholder="Auto-filled" required oninput="calcSaleFormTotals()">
+                                    <span class="input-hint" id="sale-cost-price-hint">Suggested from stock</span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sale-selling-price">Selling Price / Unit (₹) <span class="required">*</span></label>
+                                    <input type="number" id="sale-selling-price" step="0.01" min="0" placeholder="Selling Price" required oninput="calcSaleFormTotals()">
+                                    <span class="input-hint" id="sale-selling-price-hint">Retail price</span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sale-payment-method">Payment Method</label>
+                                    <select id="sale-payment-method">
+                                        <option value="Cash">Cash</option>
+                                        <option value="UPI">UPI</option>
+                                        <option value="Bank">Bank</option>
+                                        <option value="Credit">Credit</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="sale-payment-status">Payment Status</label>
+                                    <select id="sale-payment-status">
+                                        <option value="Paid">Paid</option>
+                                        <option value="Pending">Pending</option>
+                                        <option value="Partial">Partial</option>
+                                    </select>
+                                </div>
+                                <div class="form-group flex-2">
+                                    <label for="sale-notes">Sales Notes / Buyer Name</label>
+                                    <input type="text" id="sale-notes" placeholder="Optional notes, buyer name, invoice #">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group check-group" style="align-items: center; padding-top: 8px;">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="sale-print-receipt">
+                                        <span class="checkmark"></span>
+                                        Print Receipt
+                                    </label>
+                                </div>
+                                <div class="form-group check-group" style="align-items: center; padding-top: 8px;">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="sale-save-pdf">
+                                        <span class="checkmark"></span>
+                                        Save PDF
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-totals-preview" id="sales-totals-preview">
+                                <div class="preview-metric">
+                                    <span class="lbl">Total Cost</span>
+                                    <span class="val" id="sale-preview-cost">₹0.00</span>
+                                </div>
+                                <div class="preview-metric">
+                                    <span class="lbl">Total Revenue</span>
+                                    <span class="val accent-blue" id="sale-preview-revenue">₹0.00</span>
+                                </div>
+                                <div class="preview-metric">
+                                    <span class="lbl">Estimated Profit</span>
+                                    <span class="val accent-green" id="sale-preview-profit">₹0.00</span>
+                                </div>
+                            </div>
+
+                            <div class="form-actions mt-3">
+                                <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Record Sale</button>
+                                <button type="reset" class="btn btn-outline" onclick="resetSaleForm()"><i class="ph ph-x"></i> Clear Form</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Sales History Table & Filters -->
+                    <div class="card glass mt-4">
+                        <div class="table-header-controls">
+                            <div class="table-title-block">
+                                <h3>Sales History Log</h3>
+                                <p class="text-sm text-secondary">Verify and filter past transactions</p>
+                            </div>
+                            <div class="table-action-buttons">
+                                <button class="btn btn-outline btn-sm" onclick="exportTableToExcel('sales')">
+                                    <i class="ph ph-file-xls"></i> Export to Excel (.xlsx)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table Filters -->
+                        <div class="filters-row mt-3 mb-3">
+                            <div class="filter-group">
+                                <label for="filter-sales-date">Date Range</label>
+                                <select id="filter-sales-date" onchange="onSalesFilterChange()">
+                                    <option value="all">All Dates</option>
+                                    <option value="today">Today</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month" selected>This Month</option>
+                                    <option value="custom">Custom Range...</option>
+                                </select>
+                            </div>
+                            <div class="filter-group hidden" id="custom-sales-date-range">
+                                <label>Range</label>
+                                <div class="date-range-inputs">
+                                    <input type="date" id="filter-sales-start" onchange="onSalesFilterChange()">
+                                    <span>to</span>
+                                    <input type="date" id="filter-sales-end" onchange="onSalesFilterChange()">
+                                </div>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-sales-category">Category</label>
+                                <select id="filter-sales-category" onchange="onSalesFilterChange()">
+                                    <option value="all">All Categories</option>
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-sales-search">Search Notes</label>
+                                <input type="text" id="filter-sales-search" placeholder="Search by name, invoice..." oninput="onSalesFilterChange()">
+                            </div>
+                        </div>
+
+                        <!-- Data Table -->
+                        <div class="table-container">
+                            <table id="sales-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order No</th>
+                                        <th class="sortable" onclick="sortSalesTable('date')">Date <i class="ph ph-caret-down"></i></th>
+                                        <th>Product Category</th>
+                                        <th>Size</th>
+                                        <th>GSM / Weight</th>
+                                        <th>Qty Sold</th>
+                                        <th>Cost Price (₹)</th>
+                                        <th>Selling Price (₹)</th>
+                                        <th>Total Cost (₹)</th>
+                                        <th>Total Revenue (₹)</th>
+                                        <th>Profit (₹)</th>
+                                        <th>Payment</th>
+                                        <th>Notes</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                                <tfoot>
+                                    <tr class="totals-row">
+                                        <td colspan="4">Running Totals (Filtered Range)</td>
+                                        <td id="sales-total-qty">0</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td id="sales-total-cost">₹0.00</td>
+                                        <td id="sales-total-revenue">₹0.00</td>
+                                        <td id="sales-total-profit">₹0.00</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN: CUSTOMERS & USERS LEDGER -->
+            <section id="view-customers" class="view hidden">
+                <div class="customers-workspace">
+                    <!-- Customer Search Header -->
+                    <div class="card glass mb-4">
+                        <div class="control-panel-header mb-3">
+                            <div class="panel-info">
+                                <h3><i class="ph ph-users"></i> Customers & User Accounts</h3>
+                                <p class="text-sm text-secondary">Search customer history, total purchases, payments, and order balances</p>
+                            </div>
+                        </div>
+
+                        <div class="customer-search-box-wrap">
+                            <div class="search-input-group">
+                                <i class="ph ph-magnifying-glass search-icon"></i>
+                                <input type="text" id="customer-search-input" placeholder="🔍 Search customer name / phone / customer ID / order number..." oninput="onCustomerSearchChange()">
+                                <button class="btn btn-primary" onclick="onCustomerSearchChange()"><i class="ph ph-magnifying-glass"></i> Search</button>
+                            </div>
+                            <span class="input-hint mt-1">Try searching e.g., "WALKIN USER", customer name, phone number, or order "ES000005"</span>
+                        </div>
+                    </div>
+
+                    <!-- Customer Profile Summary Card -->
+                    <div id="customer-summary-card" class="card glass shadow-card mb-4" style="display: none;">
+                        <div class="customer-profile-header">
+                            <div class="cust-info-main">
+                                <div class="cust-avatar"><i class="ph ph-user"></i></div>
+                                <div>
+                                    <h3 id="cust-profile-name">WALKIN USER</h3>
+                                    <p id="cust-profile-sub" class="text-secondary text-sm">Mobile: N/A | Customer ID: CUST-001</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="customer-metrics-grid mt-3">
+                            <div class="cust-metric-box">
+                                <span class="lbl">Total Orders</span>
+                                <strong class="val" id="cust-stat-orders">0</strong>
+                            </div>
+                            <div class="cust-metric-box">
+                                <span class="lbl">Total Quantity</span>
+                                <strong class="val" id="cust-stat-qty">0 units</strong>
+                            </div>
+                            <div class="cust-metric-box">
+                                <span class="lbl">Total Purchases</span>
+                                <strong class="val accent-blue" id="cust-stat-purchases">₹0.00</strong>
+                            </div>
+                            <div class="cust-metric-box">
+                                <span class="lbl">Paid Amount</span>
+                                <strong class="val accent-green" id="cust-stat-paid">₹0.00</strong>
+                            </div>
+                            <div class="cust-metric-box">
+                                <span class="lbl">Outstanding Balance</span>
+                                <strong class="val accent-red" id="cust-stat-outstanding">₹0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Order History Table -->
+                    <div class="card glass">
+                        <div class="table-header-controls">
+                            <div class="table-title-block">
+                                <h3>Customer Order History & Billing Ledger</h3>
+                                <p class="text-sm text-secondary">Filtered transactions for selected customer</p>
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="exportCustomerLedgerToExcel()">
+                                <i class="ph ph-file-xls"></i> Export Customer Ledger
+                            </button>
+                        </div>
+
+                        <div class="table-container mt-3">
+                            <table id="customer-ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order No</th>
+                                        <th>Date</th>
+                                        <th>Product & Size</th>
+                                        <th>Qty</th>
+                                        <th>Amount (₹)</th>
+                                        <th>Payment</th>
+                                        <th class="actions-col-lg">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="7" class="empty-state">Type a customer name, phone, or order number above to view ledger.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN 3: STOCK TRACKER -->
+            <section id="view-stock" class="view hidden">
+                <div class="stock-workspace">
+                    <!-- Control Panel Header -->
+                    <div class="control-panel-header mb-3">
+                        <div class="panel-info">
+                            <h3>Stock Inventory Registry</h3>
+                            <p class="text-sm text-secondary">Monitor stock levels, reorder parameters, and values</p>
+                        </div>
+                        <div class="panel-buttons">
+                            <button class="btn btn-primary btn-sm" onclick="toggleInlineProductForm()">
+                                <i class="ph ph-plus"></i> Add New Product / Variant
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="exportTableToExcel('stock')">
+                                <i class="ph ph-file-xls"></i> Export Stock Value
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Inline Product Form Card -->
+                    <div id="inline-product-form-card" class="card glass mb-4" style="display: none;">
+                        <div class="form-title-row">
+                            <h4><i class="ph ph-plus-circle"></i> Register New Product Variant</h4>
+                            <button class="btn btn-outline btn-sm" onclick="toggleInlineProductForm()"><i class="ph ph-x"></i> Hide</button>
+                        </div>
+                        <form id="stock-new-item-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="stock-new-item-category">Product Name / Category <span class="required">*</span></label>
+                                    <input type="text" id="stock-new-item-category" list="datalist-categories" placeholder="e.g. Round Buffet Plate, Raw Sheet" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="stock-new-item-size">Product Size / Dimensions <span class="required">*</span></label>
+                                    <input type="text" id="stock-new-item-size" list="datalist-sizes" placeholder="e.g. 12 inch, 14 inch, 2x2" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="stock-new-item-gsm">GSM / Weight / Thickness <span class="required">*</span></label>
+                                    <input type="text" id="stock-new-item-gsm" list="datalist-gsms" placeholder="e.g. 250 GSM, 180 GSM, 80 kg" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="stock-new-item-unit">Inventory Unit <span class="required">*</span></label>
+                                    <select id="stock-new-item-unit" required>
+                                        <option value="pcs" selected>pcs (Pieces)</option>
+                                        <option value="kg">kg (Kilograms)</option>
+                                        <option value="roll">roll (Rolls)</option>
+                                        <option value="packet">packet (Packets)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="stock-new-item-opening">Opening Stock (Starting Qty) <span class="required">*</span></label>
+                                    <input type="number" id="stock-new-item-opening" min="0" value="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="stock-new-item-cost">Default Unit Cost (₹) <span class="required">*</span></label>
+                                    <input type="number" id="stock-new-item-cost" step="0.01" min="0" value="0.00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="stock-new-item-selling">Default Selling Price (₹) <span class="required">*</span></label>
+                                    <input type="number" id="stock-new-item-selling" step="0.01" min="0" value="0.00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="stock-new-item-reorder">Reorder Threshold Level <span class="required">*</span></label>
+                                    <input type="number" id="stock-new-item-reorder" min="0" value="500" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="stock-new-item-notes">Product Notes / Specifications</label>
+                                <input type="text" id="stock-new-item-notes" placeholder="Optional details (e.g. Diamond pattern, silver laminated)">
+                            </div>
+
+                            <div class="form-actions mt-3">
+                                <button type="submit" class="btn btn-primary"><i class="ph ph-plus"></i> Add Product to Inventory</button>
+                                <button type="reset" class="btn btn-outline" onclick="document.getElementById('stock-new-item-form').reset()"><i class="ph ph-arrow-counter-clockwise"></i> Reset</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Welcome Helper Alert when Catalog is Empty -->
+                    <div id="stock-empty-welcome-banner" class="alert-banner alert-info mb-4" style="display: none; border-left-color: var(--brand-secondary); background: rgba(99, 102, 241, 0.1);">
+                        <div class="alert-banner-text">
+                            <i class="ph ph-sparkle" style="color: #a5b4fc;"></i>
+                            <span><strong>Get Started:</strong> No products registered yet. Use the form above to register your first product with its name, GSM, size, opening stock, and cost details!</span>
+                        </div>
+                    </div>
+
+                    <!-- Filter Area -->
+                    <div class="card glass mb-4">
+                        <div class="filters-row">
+                            <div class="filter-group">
+                                <label for="filter-stock-category">Category</label>
+                                <select id="filter-stock-category" onchange="onStockFilterChange()">
+                                    <option value="all">All Categories</option>
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-stock-size">Product Size</label>
+                                <select id="filter-stock-size" onchange="onStockFilterChange()">
+                                    <option value="all">All Sizes</option>
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-stock-gsm">GSM / Weight</label>
+                                <select id="filter-stock-gsm" onchange="onStockFilterChange()">
+                                    <option value="all">All GSMs</option>
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div class="filter-group check-group">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="filter-stock-low" onchange="onStockFilterChange()">
+                                    <span class="checkmark"></span>
+                                    Show Low Stock Only
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stock Inventory Grid/Table -->
+                    <div class="card glass">
+                        <div class="table-container">
+                            <table id="stock-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item Category</th>
+                                        <th>Item Size</th>
+                                        <th>GSM / Weight</th>
+                                        <th>Unit</th>
+                                        <th>Opening Stock</th>
+                                        <th class="header-PO-qty">Purchased (PO)</th>
+                                        <th class="header-sale-qty">Used / Consumed</th>
+                                        <th>Adjustments</th>
+                                        <th>Closing Stock</th>
+                                        <th>Cost per Unit (₹)</th>
+                                        <th>Stock Value (₹)</th>
+                                        <th>Reorder Level</th>
+                                        <th>Stock Status</th>
+                                        <th class="actions-col-lg">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                                <tfoot>
+                                    <tr class="totals-row">
+                                        <td colspan="4">Total Inventory Summary</td>
+                                        <td id="stock-total-opening">-</td>
+                                        <td id="stock-total-purchased">-</td>
+                                        <td id="stock-total-used">-</td>
+                                        <td id="stock-total-adjustments">-</td>
+                                        <td id="stock-total-closing">0</td>
+                                        <td>-</td>
+                                        <td id="stock-grand-value">₹0.00</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN 4: PURCHASE ORDERS -->
+            <section id="view-orders" class="view hidden">
+                <div class="orders-workspace">
+                    <!-- PO Creation Form -->
+                    <div class="form-container glass shadow-card">
+                        <div class="form-title-row">
+                            <h3><i class="ph ph-receipt"></i> Log Purchase Order</h3>
+                            <button class="btn btn-outline btn-sm btn-variant" onclick="openModal('modal-new-supplier')">
+                                <i class="ph ph-user-plus"></i> Register New Supplier
+                            </button>
+                        </div>
+                        <form id="po-form">
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="po-item">Select Catalog Item <span class="required">*</span></label>
+                                    <select id="po-item" required>
+                                        <option value="" disabled selected>Choose a category + size + GSM...</option>
+                                        <!-- Dynamic -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="po-date">PO Date <span class="required">*</span></label>
+                                    <input type="date" id="po-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="po-qty">Quantity Purchased <span class="required">*</span></label>
+                                    <input type="number" id="po-qty" min="1" placeholder="Quantity" required oninput="calcPoFormTotal()">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="po-cost-price">Cost Price / Unit (₹) <span class="required">*</span></label>
+                                    <input type="number" id="po-cost-price" step="0.01" min="0" placeholder="e.g. 1.25" required oninput="calcPoFormTotal()">
+                                    <span class="input-hint">Will update inventory unit cost</span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="po-supplier">Supplier Name <span class="required">*</span></label>
+                                    <select id="po-supplier" required>
+                                        <option value="" disabled selected>Choose Supplier...</option>
+                                        <!-- Dynamic -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="po-die">Plate Die In (Spec)</label>
+                                    <input type="text" id="po-die" placeholder="e.g., Deep Die, Diamond">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="po-payment">Payment Status <span class="required">*</span></label>
+                                    <select id="po-payment" required>
+                                        <option value="Pending" selected>Pending</option>
+                                        <option value="Partial">Partial</option>
+                                        <option value="Paid">Paid</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="po-status">Order Status <span class="required">*</span></label>
+                                    <select id="po-status" required>
+                                        <option value="Ordered" selected>Ordered (Pending Arrival)</option>
+                                        <option value="Received">Received (Arrived at Shop)</option>
+                                        <option value="Stocked">Stocked (Added to Inventory)</option>
+                                    </select>
+                                    <span class="input-hint">Stock increases when Received or Stocked</span>
+                                </div>
+                                <div class="form-group flex-2">
+                                    <label for="po-notes">Purchase Notes</label>
+                                    <input type="text" id="po-notes" placeholder="Optional notes, invoice ref...">
+                                </div>
+                            </div>
+
+                            <div class="form-totals-preview">
+                                <div class="preview-metric">
+                                    <span class="lbl">Total Order Amount</span>
+                                    <span class="val accent-purple" id="po-preview-total">₹0.00</span>
+                                </div>
+                            </div>
+
+                            <div class="form-actions mt-3">
+                                <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Place Purchase Order</button>
+                                <button type="reset" class="btn btn-outline" onclick="resetPoForm()"><i class="ph ph-x"></i> Clear Form</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- PO Log Table & Filters -->
+                    <div class="card glass mt-4">
+                        <div class="table-header-controls">
+                            <div class="table-title-block">
+                                <h3>Purchase Orders Ledger</h3>
+                                <p class="text-sm text-secondary">Track material arrivals and payments</p>
+                            </div>
+                            <div class="table-action-buttons">
+                                <button class="btn btn-outline btn-sm" onclick="exportTableToExcel('purchase')">
+                                    <i class="ph ph-file-xls"></i> Export to Excel (.xlsx)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="filters-row mt-3 mb-3">
+                            <div class="filter-group">
+                                <label for="filter-po-month">Filter Month</label>
+                                <select id="filter-po-month" onchange="onPoFilterChange()">
+                                    <option value="all">All Months</option>
+                                    <!-- Dynamic months list -->
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-po-supplier">Supplier</label>
+                                <select id="filter-po-supplier" onchange="onPoFilterChange()">
+                                    <option value="all">All Suppliers</option>
+                                    <!-- Dynamic suppliers -->
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-po-payment">Payment Status</label>
+                                <select id="filter-po-payment" onchange="onPoFilterChange()">
+                                    <option value="all">All Statuses</option>
+                                    <option value="Paid">Paid</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Partial">Partial</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-po-status">Order Status</label>
+                                <select id="filter-po-status" onchange="onPoFilterChange()">
+                                    <option value="all">All Statuses</option>
+                                    <option value="Ordered">Ordered (Pending)</option>
+                                    <option value="Received">Received / Stocked</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Data Table -->
+                        <div class="table-container">
+                            <table id="po-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Month</th>
+                                        <th>Product Category</th>
+                                        <th>Size</th>
+                                        <th>GSM / Weight</th>
+                                        <th>Supplier Name</th>
+                                        <th>Qty Purchased</th>
+                                        <th>Cost Price (₹)</th>
+                                        <th>Total Amount (₹)</th>
+                                        <th>Plate Die In</th>
+                                        <th>Payment</th>
+                                        <th>Status</th>
+                                        <th class="actions-col-lg">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                                <tfoot>
+                                    <tr class="totals-row">
+                                        <td colspan="6">Filtered Purchasing Summary</td>
+                                        <td id="po-total-qty">0</td>
+                                        <td>-</td>
+                                        <td id="po-total-amount">₹0.00</td>
+                                        <td></td>
+                                        <td id="po-pending-payments" colspan="2" class="accent-orange text-right">Pending: ₹0.00</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Supplier Summary Cards -->
+                    <h3 class="section-subtitle mt-4 mb-2">Supplier Account Summary</h3>
+                    <div class="supplier-summary-grid" id="supplier-accounts-summary">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN 5: SMART STOCK ORDERING -->
+            <section id="view-stock-orders" class="view hidden">
+                <div class="orders-workspace">
+                    <div class="control-panel-header mb-3">
+                        <div class="panel-info">
+                            <h3>Smart Stock Ordering Tool</h3>
+                            <p class="text-sm text-secondary">Products below minimum stock, suggested buy quantities, and order tracking</p>
+                        </div>
+                    </div>
+
+                    <div class="card glass">
+                        <div class="table-container">
+                            <table id="stock-orders-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product Name</th>
+                                        <th>Size</th>
+                                        <th>GSM / Weight</th>
+                                        <th>Current Stock</th>
+                                        <th>Minimum Stock</th>
+                                        <th>Recommended Order Qty</th>
+                                        <th>Supplier Name</th>
+                                        <th>Status</th>
+                                        <th>Expected Delivery</th>
+                                        <th class="actions-col-lg">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="10" class="empty-state">Loading stock recommendations...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN 6: PRE-ORDERS & CUSTOMER QUERIES -->
+            <section id="view-preorders" class="view hidden">
+                <!-- Sub-Navigation Internal Tabs -->
+                <div class="table-header-controls mb-4">
+                    <div class="btn-group-row">
+                        <button class="btn btn-primary btn-sm" id="subtab-preorders-btn" onclick="switchSubTab('preorders')">
+                            <i class="ph ph-handshake"></i> Pre-Orders Ledger
+                        </button>
+                        <button class="btn btn-outline btn-sm" id="subtab-queries-btn" onclick="switchSubTab('queries')">
+                            <i class="ph ph-chat-circle-dots"></i> Customer Queries
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SUB-PANEL 1: PRE-ORDERS -->
+                <div id="subpanel-preorders" class="subpanel">
+                    <!-- Log Pre-Order Form -->
+                    <div class="form-container glass shadow-card">
+                        <div class="form-title-row">
+                            <h3><i class="ph ph-plus-circle"></i> Log Customer Pre-Order</h3>
+                        </div>
+                        <form id="preorder-form">
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="preorder-cust-name">Customer Name <span class="required">*</span></label>
+                                    <input type="text" id="preorder-cust-name" placeholder="e.g. Anand Kumar" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="preorder-cust-mobile">Mobile Number <span class="required">*</span></label>
+                                    <input type="tel" id="preorder-cust-mobile" placeholder="e.g. 9876543210" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="preorder-item">Select Product Variant <span class="required">*</span></label>
+                                    <select id="preorder-item" required onchange="onPreOrderProductChange()">
+                                        <option value="" disabled selected>Choose a category + size + GSM...</option>
+                                        <!-- Dynamic -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="preorder-date">Booking Date <span class="required">*</span></label>
+                                    <input type="date" id="preorder-date" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="preorder-qty">Quantity Ordered <span class="required">*</span></label>
+                                    <input type="number" id="preorder-qty" min="1" placeholder="Quantity" required oninput="calcPreOrderFormTotal()">
+                                </div>
+                                <div class="form-group">
+                                    <label for="preorder-price">Unit Selling Price (₹) <span class="required">*</span></label>
+                                    <input type="number" id="preorder-price" step="0.01" min="0" placeholder="Price" required oninput="calcPreOrderFormTotal()">
+                                </div>
+                                <div class="form-group">
+                                    <label for="preorder-delivery">Expected Delivery Date <span class="required">*</span></label>
+                                    <input type="date" id="preorder-delivery" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="preorder-notes">Order Notes / Details</label>
+                                    <input type="text" id="preorder-notes" placeholder="e.g. Extra deep plates, delivery at venue">
+                                </div>
+                            </div>
+
+                            <div class="form-totals-preview">
+                                <div class="preview-metric">
+                                    <span class="lbl">Total Order Price</span>
+                                    <span class="val accent-blue" id="preorder-preview-total">₹0.00</span>
+                                </div>
+                            </div>
+
+                            <div class="form-actions mt-3">
+                                <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Book Pre-Order</button>
+                                <button type="reset" class="btn btn-outline" onclick="resetPreOrderForm()"><i class="ph ph-x"></i> Clear Form</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Pre-Orders Table -->
+                    <div class="card glass mt-4">
+                        <div class="table-header-controls">
+                            <div class="table-title-block">
+                                <h3>Pre-Order Bookings Ledger</h3>
+                                <p class="text-sm text-secondary">Manage statuses, print delivery sheets, and verify payments</p>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="filters-row mt-3 mb-3">
+                            <div class="filter-group">
+                                <label for="filter-preorder-status">Status</label>
+                                <select id="filter-preorder-status" onchange="renderPreOrdersTable()">
+                                    <option value="all">All Bookings</option>
+                                    <option value="Pending" selected>Pending</option>
+                                    <option value="Delivered">Delivered</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-preorder-search">Search Customer</label>
+                                <input type="text" id="filter-preorder-search" placeholder="Search by name, phone..." oninput="renderPreOrdersTable()">
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-container">
+                            <table id="preorders-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th>Mobile</th>
+                                        <th>Product Variant</th>
+                                        <th>Qty</th>
+                                        <th>Unit Price (₹)</th>
+                                        <th>Total (₹)</th>
+                                        <th>Delivery Date</th>
+                                        <th>Status</th>
+                                        <th class="actions-col-lg">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-PANEL 2: CUSTOMER QUERIES -->
+                <div id="subpanel-queries" class="subpanel hidden">
+                    <!-- Log Query Form -->
+                    <div class="form-container glass shadow-card">
+                        <div class="form-title-row">
+                            <h3><i class="ph ph-plus-circle"></i> Log Customer Stock Query</h3>
+                        </div>
+                        <form id="query-form">
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="query-cust-name">Customer Name <span class="required">*</span></label>
+                                    <input type="text" id="query-cust-name" placeholder="e.g. Ramesh Babu" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="query-cust-mobile">Mobile Number <span class="required">*</span></label>
+                                    <input type="tel" id="query-cust-mobile" placeholder="e.g. 9440123456" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="query-item">Select Product Variant Requested <span class="required">*</span></label>
+                                    <select id="query-item" required>
+                                        <option value="" disabled selected>Choose a category + size + GSM...</option>
+                                        <!-- Dynamic -->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="query-date">Query Date <span class="required">*</span></label>
+                                    <input type="date" id="query-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="query-qty">Quantity Requested <span class="required">*</span></label>
+                                    <input type="number" id="query-qty" min="1" placeholder="Quantity requested" required>
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="query-notes">Details / Quotation Notes</label>
+                                <input type="text" id="query-notes" placeholder="Customer asking for festival price, discount query...">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Record Query</button>
+                                <button type="reset" class="btn btn-outline" onclick="document.getElementById('query-form').reset()"><i class="ph ph-x"></i> Clear Form</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Queries Table -->
+                    <div class="card glass mt-4">
+                        <div class="table-header-controls">
+                            <div class="table-title-block">
+                                <h3>Customer Queries Log</h3>
+                                <p class="text-sm text-secondary">Real-time check on stock levels vs customer requested quantity</p>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="filters-row mt-3 mb-3">
+                            <div class="filter-group">
+                                <label for="filter-query-search">Search Customer</label>
+                                <input type="text" id="filter-query-search" placeholder="Search by name, phone..." oninput="renderQueriesTable()">
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-container">
+                            <table id="queries-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th>Mobile</th>
+                                        <th>Product Requested</th>
+                                        <th>Qty Requested</th>
+                                        <th>Live Stock Status</th>
+                                        <th>Notes</th>
+                                        <th>Status</th>
+                                        <th class="actions-col-lg">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            <!-- SCREEN: REPORTS & INSIGHTS -->
+            <section id="view-reports" class="view hidden">
+                <div class="reports-workspace">
+                    <div class="control-panel-header mb-4">
+                        <div class="panel-info">
+                            <h3><i class="ph ph-chart-bar"></i> Business Reports & Analytics</h3>
+                            <p class="text-sm text-secondary">Operational overview, profit margins, sales distribution, and data exports</p>
+                        </div>
+                        <div class="panel-buttons">
+                            <button class="btn btn-primary btn-sm" onclick="window.print()">
+                                <i class="ph ph-printer"></i> Print Summary Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid mb-4">
+                        <div class="card glass shadow-card">
+                            <div class="card-header">
+                                <h3>Revenue & Profit Performance</h3>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="reportTrendChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card glass shadow-card">
+                            <div class="card-header">
+                                <h3>Category Distribution</h3>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="reportCategoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN: SYSTEM SETTINGS & PROFILE -->
+            <section id="view-settings" class="view hidden">
+                <div class="settings-workspace">
+                    <div class="control-panel-header mb-4">
+                        <div class="panel-info">
+                            <h3><i class="ph ph-gear"></i> System & Business Settings</h3>
+                            <p class="text-sm text-secondary">Manage company branding, system defaults, themes, and database operations</p>
+                        </div>
+                    </div>
+
+                    <!-- Business Profile Editor Card -->
+                    <div class="card glass shadow-card mb-4">
+                        <div class="card-header border-bottom pb-3 mb-3">
+                            <h4><i class="ph ph-factory"></i> Business Identity & Branding</h4>
+                        </div>
+                        <form id="settings-profile-form">
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="settings-biz-name">Company / Business Name <span class="required">*</span></label>
+                                    <input type="text" id="settings-biz-name" required>
+                                </div>
+                                <div class="form-group flex-2">
+                                    <label for="settings-biz-tagline">Tagline / Subtitle</label>
+                                    <input type="text" id="settings-biz-tagline" placeholder="e.g. Paper Plate Manufacturing">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="settings-biz-address">Factory / Store Address <span class="required">*</span></label>
+                                    <input type="text" id="settings-biz-address" required>
+                                </div>
+                                <div class="form-group flex-2">
+                                    <label for="settings-biz-contact">Contact Numbers & GSTIN <span class="required">*</span></label>
+                                    <input type="text" id="settings-biz-contact" required>
+                                </div>
+                            </div>
+                            <div class="form-actions mt-3">
+                                <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Save Business Settings</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- System Configurations Card -->
+                    <div class="card glass shadow-card mb-4">
+                        <div class="card-header border-bottom pb-3 mb-3">
+                            <h4><i class="ph ph-sliders"></i> System Preferences & Defaults</h4>
+                        </div>
+                        <div class="form-row mb-3">
+                            <div class="form-group">
+                                <label for="settings-currency">Currency Symbol</label>
+                                <input type="text" id="settings-currency" value="₹">
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-order-prefix">Order Code Prefix</label>
+                                <input type="text" id="settings-order-prefix" value="ES">
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-default-reorder">Default Reorder Threshold</label>
+                                <input type="number" id="settings-default-reorder" value="500">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Interface Theme Mode</label>
+                                <div class="btn-group-row mt-1">
+                                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('theme-toggle-btn').click()">
+                                        <i class="ph ph-sun"></i> Toggle Light/Dark Mode
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Backup & Reset Tools Card -->
+                    <div class="card glass shadow-card mb-4 border-danger-subtle">
+                        <div class="card-header border-bottom pb-3 mb-3">
+                            <h4><i class="ph ph-database"></i> Database Management & Exports</h4>
+                        </div>
+                        <div class="btn-group-row flex-wrap" style="gap: 12px;">
+                            <button class="btn btn-variant" onclick="exportSqlBackup()">
+                                <i class="ph ph-database"></i> Export Full SQL Backup (.sql)
+                            </button>
+                            <button class="btn btn-outline" onclick="exportTableToExcel('sales')">
+                                <i class="ph ph-file-xls"></i> Export Sales Log (.xlsx)
+                            </button>
+                            <button class="btn btn-outline" onclick="exportTableToExcel('stock')">
+                                <i class="ph ph-file-xls"></i> Export Inventory (.xlsx)
+                            </button>
+                            <button class="btn btn-danger" onclick="clearAllData()">
+                                <i class="ph ph-trash"></i> Reset Database / Delete All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Mobile Navigation Bar -->
+    <nav class="mobile-nav">
+        <button class="mobile-nav-item active" data-target="dashboard">
+            <i class="ph ph-squares-four"></i>
+            <span>Dashboard</span>
+        </button>
+        <button class="mobile-nav-item" data-target="sales">
+            <i class="ph ph-shopping-cart"></i>
+            <span>Sales</span>
+        </button>
+        <button class="mobile-nav-item" data-target="stock">
+            <i class="ph ph-package"></i>
+            <span>Stock</span>
+        </button>
+        <button class="mobile-nav-item" data-target="orders">
+            <i class="ph ph-receipt"></i>
+            <span>Purchases</span>
+        </button>
+        <button class="mobile-nav-item" data-target="stock-orders">
+            <i class="ph ph-truck"></i>
+            <span>Ordering</span>
+        </button>
+    </nav>
+
+    <!-- MODAL 1: EDIT BUSINESS PROFILE -->
+    <div id="modal-profile" class="modal-overlay">
+        <div class="modal-box glass shadow-card animate-zoom">
+            <div class="modal-header">
+                <h3><i class="ph ph-pencil-simple"></i> Edit Business Profile</h3>
+                <button class="modal-close-btn" onclick="closeModal('modal-profile')"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="profile-edit-form">
+                <div class="form-group mb-3">
+                    <label for="profile-name">Business Name</label>
+                    <input type="text" id="profile-name" placeholder="Sai Gayatri Industries" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="profile-tagline">Business Tagline / Subtitle</label>
+                    <input type="text" id="profile-tagline" placeholder="Paper Plates, Buffet Plates & Raw Materials Manufacturing">
+                </div>
+                <div class="form-group mb-3">
+                    <label for="profile-address">Address Location</label>
+                    <input type="text" id="profile-address" placeholder="Plot No. 42, Industrial Area, Hyderabad" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="profile-contact">Contact Details (GSTIN, Ph, Email)</label>
+                    <input type="text" id="profile-contact" placeholder="Email: contact@saigayatri.com | Ph: +91 98765 43210" required>
+                </div>
+                <div class="modal-footer mt-4">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-profile')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ADD NEW CATALOG ITEM (PRODUCT VARIANT) -->
+    <div id="modal-new-item" class="modal-overlay">
+        <div class="modal-box glass shadow-card animate-zoom">
+            <div class="modal-header">
+                <h3><i class="ph ph-sparkle"></i> Add New Product Variant</h3>
+                <button class="modal-close-btn" onclick="closeModal('modal-new-item')"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="new-item-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-item-category">Category <span class="required">*</span></label>
+                        <input type="text" id="new-item-category" list="datalist-categories" placeholder="e.g. Plate, Roll, Raw Sheet" required>
+                        <datalist id="datalist-categories">
+                            <option value="Round Buffet Plate">
+                            <option value="Breakfast Plate">
+                            <option value="Silver Wrinkle Plate">
+                            <option value="Raw Material Sheet">
+                            <option value="Laminated Roll">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-item-size">Size / Dimensions <span class="required">*</span></label>
+                        <input type="text" id="new-item-size" list="datalist-sizes" placeholder="e.g. 12 inch, 14 inch, 2x2" required>
+                        <datalist id="datalist-sizes">
+                            <option value="12 inch">
+                            <option value="14 inch">
+                            <option value="8 inch">
+                            <option value="6 inch">
+                            <option value="3x3 feet">
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-item-gsm">GSM / Thickness / Weight <span class="required">*</span></label>
+                        <input type="text" id="new-item-gsm" list="datalist-gsms" placeholder="e.g. 250 GSM, 180 GSM" required>
+                        <datalist id="datalist-gsms">
+                            <option value="250 GSM">
+                            <option value="180 GSM">
+                            <option value="120 GSM">
+                            <option value="300 GSM">
+                            <option value="80 kg">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-item-unit">Inventory Unit <span class="required">*</span></label>
+                        <select id="new-item-unit" required>
+                            <option value="pcs" selected>pcs (Pieces)</option>
+                            <option value="kg">kg (Kilograms)</option>
+                            <option value="roll">roll (Rolls)</option>
+                            <option value="packet">packet (Packets)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-item-opening">Opening Stock (Current Qty)</label>
+                        <input type="number" id="new-item-opening" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-item-cost">Default Unit Cost (₹)</label>
+                        <input type="number" id="new-item-cost" step="0.01" min="0" value="0.00">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-item-selling">Default Selling Price (₹)</label>
+                        <input type="number" id="new-item-selling" step="0.01" min="0" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-item-reorder">Reorder Threshold Level</label>
+                        <input type="number" id="new-item-reorder" min="0" value="500">
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="new-item-notes">Product Notes</label>
+                    <input type="text" id="new-item-notes" placeholder="e.g. Diamond pattern, silver laminated">
+                </div>
+
+                <div class="modal-footer mt-4">
+                    <button type="submit" class="btn btn-primary">Create Item</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-new-item')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: REGISTER NEW SUPPLIER -->
+    <div id="modal-new-supplier" class="modal-overlay">
+        <div class="modal-box glass shadow-card animate-zoom">
+            <div class="modal-header">
+                <h3><i class="ph ph-user-plus"></i> Register New Supplier</h3>
+                <button class="modal-close-btn" onclick="closeModal('modal-new-supplier')"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="new-supplier-form">
+                <div class="form-group mb-3">
+                    <label for="new-supplier-name">Supplier Business Name</label>
+                    <input type="text" id="new-supplier-name" placeholder="e.g., Balaji Paper Products Ltd." required>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="new-supplier-contact">Contact Person / Phone</label>
+                    <input type="text" id="new-supplier-contact" placeholder="e.g., Mr. Ramesh | +91 99887 76655">
+                </div>
+                <div class="modal-footer mt-4">
+                    <button type="submit" class="btn btn-primary">Add Supplier</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-new-supplier')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: MANUAL INVENTORY STOCK ADJUSTMENT -->
+    <div id="modal-adjust" class="modal-overlay">
+        <div class="modal-box glass shadow-card animate-zoom">
+            <div class="modal-header">
+                <h3><i class="ph ph-git-pull-request"></i> Manual Stock Adjustment</h3>
+                <button class="modal-close-btn" onclick="closeModal('modal-adjust')"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="adjust-form">
+                <input type="hidden" id="adjust-item-key">
+                <div class="form-group mb-3">
+                    <label>Selected Item</label>
+                    <div id="adjust-item-label" class="item-badge-preview">Round Buffet Plate – 12 inch (250 GSM)</div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="adjust-type">Adjustment Action</label>
+                        <select id="adjust-type" required>
+                            <option value="Stock In" selected>Stock In (Correction, Found Stock, Extra)</option>
+                            <option value="Stock Out">Stock Out (Wastage, Damage, Sample Use)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="adjust-qty">Adjustment Qty</label>
+                        <input type="number" id="adjust-qty" min="1" placeholder="Quantity" required>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="adjust-reason">Reason / Notes</label>
+                    <input type="text" id="adjust-reason" placeholder="e.g. Shop floor damage, periodic audit count correction" required>
+                </div>
+                <div class="modal-footer mt-4">
+                    <button type="submit" class="btn btn-primary">Save Adjustment</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-adjust')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: EDIT STOCK ITEM SETTINGS -->
+    <div id="modal-edit-stock" class="modal-overlay">
+        <div class="modal-box glass shadow-card animate-zoom">
+            <div class="modal-header">
+                <h3><i class="ph ph-gear-six"></i> Edit Product & Stock Parameters</h3>
+                <button class="modal-close-btn" onclick="closeModal('modal-edit-stock')"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="edit-stock-form">
+                <input type="hidden" id="edit-stock-item-key">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-stock-category">Product Name / Category <span class="required">*</span></label>
+                        <input type="text" id="edit-stock-category" placeholder="e.g. Round Buffet Plate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-stock-size">Size / Dimensions <span class="required">*</span></label>
+                        <input type="text" id="edit-stock-size" placeholder="e.g. 12 inch" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-stock-gsm">GSM / Weight / Thickness <span class="required">*</span></label>
+                        <input type="text" id="edit-stock-gsm" placeholder="e.g. 250 GSM" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-stock-unit">Inventory Unit <span class="required">*</span></label>
+                        <select id="edit-stock-unit" required>
+                            <option value="pcs">pcs (Pieces)</option>
+                            <option value="kg">kg (Kilograms)</option>
+                            <option value="roll">roll (Rolls)</option>
+                            <option value="packet">packet (Packets)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-stock-opening">Opening Stock (Starting Qty) <span class="required">*</span></label>
+                        <input type="number" id="edit-stock-opening" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-stock-cost">Cost per Unit (₹) <span class="required">*</span></label>
+                        <input type="number" id="edit-stock-cost" step="0.01" min="0" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-stock-selling">Selling Price (₹) <span class="required">*</span></label>
+                        <input type="number" id="edit-stock-selling" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-stock-reorder">Reorder Threshold Level <span class="required">*</span></label>
+                        <input type="number" id="edit-stock-reorder" min="0" required>
+                    </div>
+                </div>
+
+                <div class="modal-footer mt-4">
+                    <button type="submit" class="btn btn-primary">Apply Changes</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-edit-stock')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 6: EDITABLE PRINT RECEIPT PREVIEW -->
+    <div id="modal-receipt" class="modal-overlay">
+        <div class="modal-box glass shadow-card animate-zoom" style="max-width: 680px;">
+            <div class="modal-header no-print">
+                <h3><i class="ph ph-printer"></i> Receipt / Slip Document Generator</h3>
+                <button class="modal-close-btn" onclick="closeModal('modal-receipt')"><i class="ph ph-x"></i></button>
+            </div>
+            
+            <!-- Receipt Print Area (Optimized for both screen view and paper print) -->
+            <div id="receipt-print-area" class="receipt-container">
+                <div class="receipt-header">
+                    <div class="receipt-brand-copy">
+                        <input type="text" id="receipt-brand-name" class="print-input-header font-bold text-center w-full" value="SAI GAYATRI INDUSTRIES" style="font-size: 1.4rem; text-align: center; border: none; background: transparent; color: inherit; font-weight: 700; width: 100%;">
+                        <textarea id="receipt-brand-details" class="print-input-sub text-center w-full" style="text-align: center; border: none; background: transparent; color: inherit; font-size: 0.85rem; height: 38px; resize: none; width: 100%; font-family: inherit;">Plot No. 42, Industrial Area, Hyderabad | Ph: +91 98765 43210</textarea>
+                    </div>
+                </div>
+
+                <div class="receipt-type-row mt-2">
+                    <div class="form-group" style="width: auto; flex: 2; margin-bottom: 0;">
+                        <label class="print-label">Document Type</label>
+                        <select id="receipt-doc-type" class="print-select">
+                            <option value="DELIVERY CHALAN" selected>DELIVERY CHALAN</option>
+                            <option value="ORDER BOOKING SLIP">ORDER BOOKING SLIP</option>
+                            <option value="PRICE QUOTATION">PRICE QUOTATION</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="width: 140px; margin-bottom: 0;">
+                        <label class="print-label">Slip/Voucher No.</label>
+                        <input type="text" id="receipt-number" class="print-input" value="SG-2026-0001">
+                    </div>
+                    <div class="form-group" style="width: 145px; margin-bottom: 0;">
+                        <label class="print-label">Date</label>
+                        <input type="date" id="receipt-date" class="print-input">
+                    </div>
+                </div>
+
+                <!-- Customer Details -->
+                <div class="receipt-customer-section mt-3">
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="print-label">Customer Name</label>
+                            <input type="text" id="receipt-cust-name" class="print-input" value="Anand Kumar">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="print-label">Customer Mobile</label>
+                            <input type="text" id="receipt-cust-mobile" class="print-input" value="9876543210">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Grid (Fully Editable) -->
+                <div class="receipt-items-section mt-3">
+                    <table class="receipt-table" id="receipt-items-table">
+                        <thead>
+                            <tr>
+                                <th>Item Description</th>
+                                <th style="width: 90px; text-align: center;">Qty</th>
+                                <th style="width: 120px; text-align: right;">Unit Price (₹)</th>
+                                <th style="width: 130px; text-align: right;">Total Price (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Generated Dynamically with Editable Inputs -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Totals Section -->
+                <div class="receipt-totals-section mt-3">
+                    <div class="totals-flex">
+                        <div class="totals-col-notes">
+                            <label class="print-label">Notes / Terms</label>
+                            <textarea id="receipt-terms" class="print-input-notes" style="height: 55px; resize: none; font-family: inherit; font-size: 0.75rem; width: 100%; border: 1px solid var(--border-color); padding: 4px; border-radius: 4px;">* Goods once sold will not be returned.
+* Subject to local jurisdiction.</textarea>
+                        </div>
+                        <div class="totals-col-values">
+                            <div class="totals-row-item">
+                                <span>Sub Total:</span>
+                                <span id="receipt-subtotal-val">₹0.00</span>
+                            </div>
+                            <div class="totals-row-item">
+                                <span>Freight / Charges (₹):</span>
+                                <input type="number" id="receipt-freight-val" class="print-input-mini" value="0.00" oninput="recalcReceiptGrandTotal()" style="width: 80px; text-align: right; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 4px;">
+                            </div>
+                            <div class="totals-row-item grand-total">
+                                <span>Grand Total:</span>
+                                <span id="receipt-grandtotal-val" class="font-bold">₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signatures -->
+                <div class="receipt-signature-section mt-4">
+                    <div class="sig-col">
+                        <div class="sig-line"></div>
+                        <span>Customer's Signature</span>
+                    </div>
+                    <div class="sig-col text-right">
+                        <div class="sig-line"></div>
+                        <span>Authorized Signatory</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Print Actions -->
+            <div class="modal-footer mt-4 no-print">
+                <button class="btn btn-primary" onclick="printReceiptDocument()"><i class="ph ph-printer"></i> Print / Save PDF</button>
+                <button class="btn btn-outline" onclick="closeModal('modal-receipt')">Close Editor</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 7: ORDER LOOKUP & FULL ORDER DETAIL -->
+    <div id="modal-order-lookup" class="modal-overlay">
+        <div class="modal-box glass shadow-card animate-zoom" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="ph ph-receipt"></i> Order Detail Overview</h3>
+                <button class="modal-close-btn" onclick="closeModal('modal-order-lookup')"><i class="ph ph-x"></i></button>
+            </div>
+            
+            <div class="order-detail-card-body p-3">
+                <div class="order-badge-row mb-3" style="display: flex; gap: 10px; align-items: center;">
+                    <span class="badge-status badge-ordered" id="ol-order-no">ES000005</span>
+                    <span class="badge-status" id="ol-payment-badge">Paid</span>
+                </div>
+
+                <div class="order-grid-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: rgba(0,0,0,0.03); padding: 14px; border-radius: 8px;">
+                    <div class="order-detail-item">
+                        <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Customer Name</span>
+                        <strong class="val" id="ol-customer-name" style="font-size: 0.95rem;">WALKIN USER</strong>
+                    </div>
+                    <div class="order-detail-item">
+                        <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Customer Phone</span>
+                        <span class="val" id="ol-customer-mobile" style="font-size: 0.95rem;">N/A</span>
+                    </div>
+                    <div class="order-detail-item">
+                        <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Date</span>
+                        <span class="val" id="ol-date" style="font-size: 0.95rem;">13-Aug-2026</span>
+                    </div>
+                    <div class="order-detail-item">
+                        <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Product Category</span>
+                        <span class="val" id="ol-product" style="font-size: 0.95rem;">Paper Plate</span>
+                    </div>
+                    <div class="order-detail-item">
+                        <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Size / Dimensions</span>
+                        <span class="val" id="ol-size" style="font-size: 0.95rem;">14 in</span>
+                    </div>
+                    <div class="order-detail-item">
+                        <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Quantity</span>
+                        <strong class="val" id="ol-qty" style="font-size: 0.95rem;">3,000</strong>
+                    </div>
+                    <div class="order-detail-item">
+                        <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Selling Price</span>
+                        <span class="val" id="ol-price" style="font-size: 0.95rem;">₹2.30</span>
+                    </div>
+                    <div class="order-detail-item highlight">
+                        <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Total Revenue / Amount</span>
+                        <strong class="val accent-purple" id="ol-total" style="font-size: 1.1rem; color: #6366f1;">₹6,900.00</strong>
+                    </div>
+                </div>
+
+                <div class="order-notes-box mt-3" id="ol-notes-container" style="background: rgba(0,0,0,0.02); padding: 10px; border-radius: 6px;">
+                    <span class="lbl" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); display: block;">Notes</span>
+                    <p id="ol-notes-text" class="text-sm text-secondary" style="margin: 0;">No notes</p>
+                </div>
+            </div>
+
+            <div class="modal-footer mt-4" style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+                <button class="btn btn-primary btn-sm" onclick="printReceiptFromLookup()"><i class="ph ph-printer"></i> 🖨️ Print Receipt</button>
+                <button class="btn btn-secondary btn-sm" onclick="downloadPdfFromLookup()"><i class="ph ph-file-pdf"></i> 📄 Download PDF</button>
+                <button class="btn btn-variant btn-sm" onclick="editOrderFromLookup()"><i class="ph ph-pencil-simple"></i> ✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="cancelOrderFromLookup()"><i class="ph ph-arrow-u-down-left"></i> ↩️ Return/Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">Action completed successfully</div>
+
+    <script src="app.js"></script>
+</body>
+</html>
