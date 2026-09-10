@@ -19,6 +19,7 @@ export default function SaleForm() {
   const editingId = searchParams.get('id')
   const isEditing = Boolean(editingId)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [customerName, setCustomerName] = useState('')
   const [mobile, setMobile] = useState('')
   const [saleDate, setSaleDate] = useState('')
@@ -44,6 +45,7 @@ export default function SaleForm() {
         setProducts(sale.products.map((product: SaleRecord['products'][number]) => ({ ...product })))
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load sales data.'))
+      .finally(() => setIsLoading(false))
   }, [editingId])
 
   const maxProducts = 8
@@ -178,6 +180,12 @@ export default function SaleForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-24 sm:pb-0">
       {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
+      {isLoading && <div className="rounded-2xl border border-[#d9eee8] bg-[#f3fbf8] px-4 py-3 text-sm font-semibold text-[#285d50]">Loading inventory from the cloud...</div>}
+      {!isLoading && !error && inventoryOptions.length === 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          No inventory items are available yet. Add inventory first, then return here to select products.
+        </div>
+      )}
       <section className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="form-label">Customer Name *</label>
