@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { deleteCloudOrderQuery, getCloudOrderQueries, saveCloudOrderQuery } from '../utils/cloudStorage'
+import { deleteCloudOrderQuery, describeCloudError, getCloudOrderQueries, saveCloudOrderQuery } from '../utils/cloudStorage'
 import type { OrderQuery, OrderQueryProduct } from '../utils/storage'
 
 const stages: OrderQuery['stage'][] = ['Order', 'To Pickup', 'To Deliver', 'Delivered']
@@ -26,7 +26,7 @@ export default function OrderQueries() {
     return { totalPlates, grandTotal, remaining: Math.max(0, grandTotal - advancePayment) }
   }, [products, advancePayment])
 
-  const load = () => getCloudOrderQueries().then(setOrders).catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load order queries.'))
+  const load = () => getCloudOrderQueries().then(setOrders).catch((loadError) => setError(describeCloudError(loadError, 'Unable to load order queries.')))
   useEffect(() => { load() }, [])
 
   const updateProduct = (index: number, changes: Partial<OrderQueryProduct>) => {
@@ -46,13 +46,13 @@ export default function OrderQueries() {
       setCustomerName(''); setMobile(''); setWithCover(0); setWithoutCover(0); setAdvancePayment(0)
       setProducts([{ id: '', name: '', quantity: 0, selling: 0 }]); await load()
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save order query.')
+      setError(describeCloudError(saveError, 'Unable to save order query.'))
     } finally { setSaving(false) }
   }
 
   const remove = async (id: string) => {
     try { await deleteCloudOrderQuery(id); setOrders((current) => current.filter((order) => order.id !== id)) }
-    catch (deleteError) { setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete order query.') }
+    catch (deleteError) { setError(describeCloudError(deleteError, 'Unable to delete order query.')) }
   }
 
   return <div className="space-y-6 pb-8">

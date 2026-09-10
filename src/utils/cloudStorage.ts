@@ -4,6 +4,12 @@ import type { BusinessExpense, InventoryItem, OrderQuery, ProductMasterItem, Sal
 export function describeCloudError(error: unknown, fallback: string) {
   if (error && typeof error === 'object') {
     const details = error as { message?: string; details?: string; hint?: string; code?: string }
+    if (details.code === '42P01' || details.message?.toLowerCase().includes('does not exist')) {
+      return `${fallback} The new tool tables are not installed in Supabase yet. Run the latest SQL from supabase/schema.sql, then refresh.`
+    }
+    if (details.code === '42501' || details.message?.toLowerCase().includes('row-level security')) {
+      return `${fallback} Supabase permissions are blocking this action. Run the latest RLS policy SQL from supabase/schema.sql.`
+    }
     const parts = [details.message, details.details, details.hint, details.code].filter(Boolean)
     if (parts.length > 0) return parts.join(' — ')
   }
@@ -206,9 +212,11 @@ function toOrderQuery(row: Record<string, unknown>, products: OrderQuery['produc
 
 export async function getCloudOrderQueries(): Promise<OrderQuery[]> {
   const client = requireSupabase()
-  const { data: orders, error } = await client.from('order_queries').select('*').order('created_at', { ascending: false })
+  const [{ data: orders, error }, { data: products, error: productsError }] = await Promise.all([
+    client.from('order_queries').select('*').order('created_at', { ascending: false }),
+    client.from('order_query_products').select('*')
+  ])
   if (error) throw error
-  const { data: products, error: productsError } = await client.from('order_query_products').select('*')
   if (productsError) throw productsError
   return (orders || []).map((order) => toOrderQuery(order, (products || []).filter((item) => item.order_id === order.id).map((item) => ({
     id: String(item.product_id),

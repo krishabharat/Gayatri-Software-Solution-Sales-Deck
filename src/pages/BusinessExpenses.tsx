@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { deleteCloudBusinessExpense, getCloudBusinessExpenses, saveCloudBusinessExpense } from '../utils/cloudStorage'
+import { deleteCloudBusinessExpense, describeCloudError, getCloudBusinessExpenses, saveCloudBusinessExpense } from '../utils/cloudStorage'
 import type { BusinessExpense } from '../utils/storage'
 
 const categories = ['Rent', 'Meshinery expnce', 'Curent bil', 'Termosat', 'Petrol', 'Heating coil', 'rechege', 'Hydrolic oil', 'own expences', 'Die', 'Trasport charges', 'Stock purchase']
@@ -15,16 +15,16 @@ export default function BusinessExpenses() {
   const [saving, setSaving] = useState(false)
   const total = useMemo(() => expenses.reduce((sum, item) => sum + item.amount, 0), [expenses])
 
-  const load = () => getCloudBusinessExpenses().then(setExpenses).catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load expenses.'))
+  const load = () => getCloudBusinessExpenses().then(setExpenses).catch((loadError) => setError(describeCloudError(loadError, 'Unable to load expenses.')))
   useEffect(() => { load() }, [])
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); if (!date || amount <= 0 || saving) return
     setSaving(true); setError('')
     try { await saveCloudBusinessExpense({ id: `${Date.now()}`, date, category, amount, note, createdAt: new Date().toISOString() }); setAmount(0); setNote(''); await load() }
-    catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Unable to save expense.') }
+    catch (saveError) { setError(describeCloudError(saveError, 'Unable to save expense.')) }
     finally { setSaving(false) }
   }
-  const remove = async (id: string) => { try { await deleteCloudBusinessExpense(id); setExpenses((current) => current.filter((item) => item.id !== id)) } catch (deleteError) { setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete expense.') } }
+  const remove = async (id: string) => { try { await deleteCloudBusinessExpense(id); setExpenses((current) => current.filter((item) => item.id !== id)) } catch (deleteError) { setError(describeCloudError(deleteError, 'Unable to delete expense.')) } }
 
   return <div className="space-y-6 pb-8">
     <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7d8d89]">Daily and monthly operations</div><h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Business Expenses</h2></div><Link to="/reports" className="secondary-btn">Back to Reports</Link></header>
