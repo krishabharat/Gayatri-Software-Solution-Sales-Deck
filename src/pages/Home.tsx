@@ -119,6 +119,21 @@ export default function Home() {
           />
         )}
       </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <Link to="/orders" className="app-surface block p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0f6b63]">Operations tool</div>
+          <h2 className="mt-2 text-lg font-semibold">User Query / Orders</h2>
+          <p className="mt-1 text-sm text-slate-600">Record customer mobile, covers, up to 8 products, delivery date, stage, and advance payment.</p>
+          <span className="mt-4 inline-flex primary-btn">Open order tool</span>
+        </Link>
+        <Link to="/expenses" className="app-surface block p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0f6b63]">Operations tool</div>
+          <h2 className="mt-2 text-lg font-semibold">Business Expenses</h2>
+          <p className="mt-1 text-sm text-slate-600">Track rent, machinery, bills, fuel, oil, transport, stock purchases, and daily expenses.</p>
+          <span className="mt-4 inline-flex secondary-btn">Open expense tool</span>
+        </Link>
+      </section>
     </div>
   )
 }

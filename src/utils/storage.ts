@@ -48,6 +48,40 @@ export type SaleRecord = {
   createdAt: string
 }
 
+export type OrderQueryProduct = {
+  id: string
+  name: string
+  quantity: number
+  selling: number
+}
+
+export type OrderQuery = {
+  id: string
+  customerName: string
+  mobile: string
+  withCover: number
+  withoutCover: number
+  orderDate: string
+  deliveryDate: string
+  stage: 'Order' | 'To Pickup' | 'To Deliver' | 'Delivered'
+  paymentMethod: 'Online' | 'Cash'
+  advancePayment: number
+  products: OrderQueryProduct[]
+  totalPlates: number
+  grandTotal: number
+  remaining: number
+  createdAt: string
+}
+
+export type BusinessExpense = {
+  id: string
+  date: string
+  category: string
+  amount: number
+  note: string
+  createdAt: string
+}
+
 const INVENTORY_KEY = 'sai-gayatri-inventory'
 const PRODUCTS_KEY = 'sai-gayatri-products'
 const SALES_KEY = 'sai-gayatri-sales'

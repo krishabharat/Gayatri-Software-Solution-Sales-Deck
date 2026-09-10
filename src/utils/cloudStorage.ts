@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { InventoryItem, ProductMasterItem, SaleProduct, SaleRecord } from './storage'
+import type { BusinessExpense, InventoryItem, OrderQuery, ProductMasterItem, SaleProduct, SaleRecord } from './storage'
 
 export function describeCloudError(error: unknown, fallback: string) {
   if (error && typeof error === 'object') {
@@ -181,5 +181,91 @@ export async function saveCloudSale(sale: SaleRecord) {
 export async function deleteCloudSale(id: string) {
   const client = requireSupabase()
   const { error } = await client.from('sales').delete().eq('id', id)
+  if (error) throw error
+}
+
+function toOrderQuery(row: Record<string, unknown>, products: OrderQuery['products']): OrderQuery {
+  return {
+    id: String(row.id),
+    customerName: String(row.customer_name || ''),
+    mobile: String(row.mobile || ''),
+    withCover: Number(row.with_cover || 0),
+    withoutCover: Number(row.without_cover || 0),
+    orderDate: String(row.order_date || ''),
+    deliveryDate: String(row.delivery_date || ''),
+    stage: (row.stage || 'Order') as OrderQuery['stage'],
+    paymentMethod: (row.payment_method || 'Cash') as OrderQuery['paymentMethod'],
+    advancePayment: Number(row.advance_payment || 0),
+    products,
+    totalPlates: Number(row.total_plates || 0),
+    grandTotal: Number(row.grand_total || 0),
+    remaining: Number(row.remaining || 0),
+    createdAt: String(row.created_at || new Date().toISOString())
+  }
+}
+
+export async function getCloudOrderQueries(): Promise<OrderQuery[]> {
+  const client = requireSupabase()
+  const { data: orders, error } = await client.from('order_queries').select('*').order('created_at', { ascending: false })
+  if (error) throw error
+  const { data: products, error: productsError } = await client.from('order_query_products').select('*')
+  if (productsError) throw productsError
+  return (orders || []).map((order) => toOrderQuery(order, (products || []).filter((item) => item.order_id === order.id).map((item) => ({
+    id: String(item.product_id),
+    name: String(item.product_name || ''),
+    quantity: Number(item.quantity || 0),
+    selling: Number(item.selling || 0)
+  }))))
+}
+
+export async function saveCloudOrderQuery(order: OrderQuery) {
+  const client = requireSupabase()
+  const { error } = await client.from('order_queries').upsert({
+    id: order.id, customer_name: order.customerName, mobile: order.mobile,
+    with_cover: order.withCover, without_cover: order.withoutCover,
+    order_date: order.orderDate, delivery_date: order.deliveryDate, stage: order.stage,
+    payment_method: order.paymentMethod, advance_payment: order.advancePayment,
+    total_plates: order.totalPlates, grand_total: order.grandTotal,
+    remaining: order.remaining, created_at: order.createdAt
+  })
+  if (error) throw error
+  const { error: deleteError } = await client.from('order_query_products').delete().eq('order_id', order.id)
+  if (deleteError) throw deleteError
+  const { error: productsError } = await client.from('order_query_products').insert(order.products.map((product) => ({
+    id: `${order.id}-${product.id}`, order_id: order.id, product_id: product.id,
+    product_name: product.name, quantity: product.quantity, selling: product.selling
+  })))
+  if (productsError) throw productsError
+}
+
+export async function deleteCloudOrderQuery(id: string) {
+  const client = requireSupabase()
+  const { error } = await client.from('order_queries').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function getCloudBusinessExpenses(): Promise<BusinessExpense[]> {
+  const client = requireSupabase()
+  const { data, error } = await client.from('business_expenses').select('*').order('date', { ascending: false })
+  if (error) throw error
+  return (data || []).map((row) => ({
+    id: String(row.id), date: String(row.date), category: String(row.category || ''),
+    amount: Number(row.amount || 0), note: String(row.note || ''),
+    createdAt: String(row.created_at || new Date().toISOString())
+  }))
+}
+
+export async function saveCloudBusinessExpense(expense: BusinessExpense) {
+  const client = requireSupabase()
+  const { error } = await client.from('business_expenses').upsert({
+    id: expense.id, date: expense.date, category: expense.category,
+    amount: expense.amount, note: expense.note, created_at: expense.createdAt
+  })
+  if (error) throw error
+}
+
+export async function deleteCloudBusinessExpense(id: string) {
+  const client = requireSupabase()
+  const { error } = await client.from('business_expenses').delete().eq('id', id)
   if (error) throw error
 }

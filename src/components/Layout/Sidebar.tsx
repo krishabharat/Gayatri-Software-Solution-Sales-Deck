@@ -56,6 +56,14 @@ export default function Sidebar() {
         ))}
       </nav>
 
+      <div className="mt-8">
+        <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7d6b89]">Operations tools</div>
+        <div className="space-y-2">
+          <NavLink to="/orders" className={({ isActive }) => `block rounded-xl px-3 py-2.5 text-sm font-semibold ${isActive ? 'bg-[#e7f7f2] text-[#0f6b63]' : 'text-slate-600 hover:bg-[#f4fbf8]'}`}>User Query / Orders</NavLink>
+          <NavLink to="/expenses" className={({ isActive }) => `block rounded-xl px-3 py-2.5 text-sm font-semibold ${isActive ? 'bg-[#e7f7f2] text-[#0f6b63]' : 'text-slate-600 hover:bg-[#f4fbf8]'}`}>Business Expenses</NavLink>
+        </div>
+      </div>
+
       <div className="mt-auto rounded-2xl border border-[#eadff2] bg-[#f5ecff] p-4">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6a5d7b]">Operations</div>
         <div className="mt-2 text-sm font-semibold text-[#2d1739]">Industrial service control</div>
