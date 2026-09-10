@@ -27,6 +27,7 @@ export default function SaleForm() {
   const [discount, setDiscount] = useState(0)
   const [products, setProducts] = useState<Product[]>([{}])
   const [error, setError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     Promise.all([getCloudInventoryItems(), editingId ? getCloudSalesRecords() : Promise.resolve([] as SaleRecord[])])
@@ -103,94 +104,68 @@ export default function SaleForm() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (!canSave) return
-
-    const validProducts = products
-      .filter((product) => Number(product.quantity) > 0)
-      .map((product, index) => ({
-        id: String(product.id || `product-${index + 1}`).trim(),
-        name: String(product.name || `Product ${index + 1}`).trim(),
-        quantity: Number(product.quantity) || 0,
-        selling: Number(product.selling) || 0
-      }))
+    if (!canSave || isSaving) return
 
     setError('')
-    const inventory = await getCloudInventoryItems()
-    const currentSales = await getCloudSalesRecords()
-    const currentSale = editingId ? currentSales.find((record) => record.id === editingId) : null
-
-    if (currentSale) {
-      const restoredInventory = inventory.map((item) => {
-        let currentQuantity = Number(item.quantity || 0)
-
-        currentSale.products.forEach((product) => {
-          const matchesId = item.productId && product.id && item.productId.toLowerCase() === product.id.toLowerCase()
-          const matchesName = !matchesId && item.productName && product.name && item.productName.toLowerCase() === product.name.toLowerCase()
-
-          if (matchesId || matchesName) {
-            currentQuantity = currentQuantity + Number(product.quantity || 0)
-          }
-        })
-
-        return { ...item, quantity: currentQuantity }
-      })
-
-      const nextInventory = restoredInventory.map((item) => {
-        let currentQuantity = Number(item.quantity || 0)
-
-        validProducts.forEach((product) => {
-          const matchesId = item.productId && product.id && item.productId.toLowerCase() === product.id.toLowerCase()
-          const matchesName = !matchesId && item.productName && product.name && item.productName.toLowerCase() === product.name.toLowerCase()
-
-          if (matchesId || matchesName) {
-            currentQuantity = Math.max(0, currentQuantity - Number(product.quantity || 0))
-          }
-        })
-
-        return { ...item, quantity: currentQuantity }
-      })
-
-      await Promise.all(nextInventory.map((item) => saveCloudInventoryItem(item)))
-    } else {
-      const nextInventory = inventory.map((item) => {
-        let currentQuantity = Number(item.quantity || 0)
-
-        validProducts.forEach((product) => {
-          const matchesId = item.productId && product.id && item.productId.toLowerCase() === product.id.toLowerCase()
-          const matchesName = !matchesId && item.productName && product.name && item.productName.toLowerCase() === product.name.toLowerCase()
-
-          if (matchesId || matchesName) {
-            currentQuantity = Math.max(0, currentQuantity - Number(product.quantity || 0))
-          }
-        })
-
-        return { ...item, quantity: currentQuantity }
-      })
-
-      await Promise.all(nextInventory.map((item) => saveCloudInventoryItem(item)))
-    }
-
-    const saleRecord: SaleRecord = {
-      id: editingId || `${Date.now()}`,
-      customerName,
-      mobile,
-      saleDate,
-      paymentStatus,
-      discount,
-      amountPaid: paymentStatus === 'Partial' ? amountPaid : totals.safeAmountPaid,
-      products: validProducts,
-      totalPlates: totals.totalPlates,
-      subtotal: totals.subtotal,
-      grandTotal: totals.grandTotal,
-      remaining: totals.remaining,
-      createdAt: new Date().toISOString()
-    }
+    setIsSaving(true)
 
     try {
+      const validProducts = products
+        .filter((product) => Number(product.quantity) > 0)
+        .map((product, index) => ({
+          id: String(product.id || `product-${index + 1}`).trim(),
+          name: String(product.name || `Product ${index + 1}`).trim(),
+          quantity: Number(product.quantity) || 0,
+          selling: Number(product.selling) || 0
+        }))
+
+      const inventory = await getCloudInventoryItems()
+      const currentSales = await getCloudSalesRecords()
+      const currentSale = editingId ? currentSales.find((record) => record.id === editingId) : null
+
+      const adjustedInventory = inventory.map((item) => {
+        let currentQuantity = Number(item.quantity || 0)
+
+        if (currentSale) {
+          currentSale.products.forEach((product) => {
+            const matchesId = item.productId && product.id && item.productId.toLowerCase() === product.id.toLowerCase()
+            const matchesName = !matchesId && item.productName && product.name && item.productName.toLowerCase() === product.name.toLowerCase()
+            if (matchesId || matchesName) currentQuantity += Number(product.quantity || 0)
+          })
+        }
+
+        validProducts.forEach((product) => {
+          const matchesId = item.productId && product.id && item.productId.toLowerCase() === product.id.toLowerCase()
+          const matchesName = !matchesId && item.productName && product.name && item.productName.toLowerCase() === product.name.toLowerCase()
+          if (matchesId || matchesName) currentQuantity = Math.max(0, currentQuantity - Number(product.quantity || 0))
+        })
+
+        return { ...item, quantity: currentQuantity }
+      })
+
+      const saleRecord: SaleRecord = {
+        id: editingId || `${Date.now()}`,
+        customerName,
+        mobile,
+        saleDate,
+        paymentStatus,
+        discount,
+        amountPaid: paymentStatus === 'Partial' ? amountPaid : totals.safeAmountPaid,
+        products: validProducts,
+        totalPlates: totals.totalPlates,
+        subtotal: totals.subtotal,
+        grandTotal: totals.grandTotal,
+        remaining: totals.remaining,
+        createdAt: new Date().toISOString()
+      }
+
       await saveCloudSale(saleRecord)
+      await Promise.all(adjustedInventory.map((item) => saveCloudInventoryItem(item)))
       navigate('/sales')
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save sale.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -201,7 +176,7 @@ export default function SaleForm() {
     products.some((product) => Number(product.quantity) > 0)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-24 sm:pb-0">
       {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
       <section className="grid gap-4 md:grid-cols-2">
         <div>
@@ -314,11 +289,13 @@ export default function SaleForm() {
         </div>
       </section>
 
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#eadff2] bg-white/95 p-3 shadow-[0_-12px_30px_rgba(52,31,63,0.12)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:shadow-none">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 sm:flex-row sm:justify-end">
         <button type="button" className="secondary-btn" onClick={() => navigate('/sales')}>Cancel</button>
-        <button type="submit" disabled={!canSave} className={`primary-btn ${!canSave ? 'cursor-not-allowed opacity-60' : ''}`}>
-          {isEditing ? 'UPDATE SALE' : 'SAVE SALE'}
+        <button type="submit" disabled={!canSave || isSaving} className={`primary-btn ${!canSave || isSaving ? 'cursor-not-allowed opacity-60' : ''}`}>
+          {isSaving ? 'SAVING...' : isEditing ? 'UPDATE SALE' : 'SAVE SALE'}
         </button>
+        </div>
       </div>
     </form>
   )
