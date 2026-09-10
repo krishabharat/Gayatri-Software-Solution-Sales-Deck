@@ -1,6 +1,17 @@
 import { supabase } from './supabase'
 import type { InventoryItem, ProductMasterItem } from './storage'
 
+export function describeCloudError(error: unknown, fallback: string) {
+  if (error && typeof error === 'object') {
+    const details = error as { message?: string; details?: string; hint?: string; code?: string }
+    const parts = [details.message, details.details, details.hint, details.code].filter(Boolean)
+    if (parts.length > 0) return parts.join(' — ')
+  }
+
+  if (error instanceof Error) return error.message
+  return fallback
+}
+
 function requireSupabase() {
   if (!supabase) {
     throw new Error('Supabase is not configured. Add the Vercel environment variables and redeploy.')

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getCloudInventoryItems, getCloudProductMasterItems, saveCloudInventoryItem, saveCloudProductMasterItem } from '../utils/cloudStorage'
+import { describeCloudError, getCloudInventoryItems, getCloudProductMasterItems, saveCloudInventoryItem, saveCloudProductMasterItem } from '../utils/cloudStorage'
 import { type InventoryItem, type ProductMasterItem } from '../utils/storage'
 
 export default function AddInventory() {
@@ -87,7 +87,7 @@ export default function AddInventory() {
 
       navigate('/inventory')
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save inventory.')
+      setError(describeCloudError(saveError, 'Unable to save inventory.'))
     }
   }
 
