@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import ProductRow from './ProductRow'
-import { getInventoryItems, getSalesRecords, saveInventoryItems, saveSalesRecords, type InventoryItem, type SaleRecord } from '../../utils/storage'
+import { getCloudInventoryItems, getCloudSalesRecords, saveCloudInventoryItem, saveCloudSale } from '../../utils/cloudStorage'
+import { type InventoryItem, type SaleRecord } from '../../utils/storage'
 
 type Product = {
   id?: string
@@ -25,29 +26,23 @@ export default function SaleForm() {
   const [amountPaid, setAmountPaid] = useState(0)
   const [discount, setDiscount] = useState(0)
   const [products, setProducts] = useState<Product[]>([{}])
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setInventoryItems(getInventoryItems())
-
-    if (!editingId) return
-
-    const sale = getSalesRecords().find((record) => record.id === editingId)
-    if (!sale) return
-
-    setCustomerName(sale.customerName || '')
-    setMobile(sale.mobile || '')
-    setSaleDate(sale.saleDate || '')
-    setPaymentStatus(sale.paymentStatus || 'Unpaid')
-    setAmountPaid(Number(sale.amountPaid || 0))
-    setDiscount(Number(sale.discount || 0))
-    setProducts(
-      (sale.products || []).map((product) => ({
-        id: String(product.id || ''),
-        name: String(product.name || ''),
-        quantity: Number(product.quantity || 0),
-        selling: Number(product.selling || 0)
-      }))
-    )
+    Promise.all([getCloudInventoryItems(), editingId ? getCloudSalesRecords() : Promise.resolve([] as SaleRecord[])])
+      .then(([inventory, sales]) => {
+        setInventoryItems(inventory)
+        const sale = sales.find((record) => record.id === editingId)
+        if (!sale) return
+        setCustomerName(sale.customerName || '')
+        setMobile(sale.mobile || '')
+        setSaleDate(sale.saleDate || '')
+        setPaymentStatus(sale.paymentStatus || 'Unpaid')
+        setAmountPaid(Number(sale.amountPaid || 0))
+        setDiscount(Number(sale.discount || 0))
+        setProducts(sale.products.map((product: SaleRecord['products'][number]) => ({ ...product })))
+      })
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load sales data.'))
   }, [editingId])
 
   const maxProducts = 8
@@ -105,7 +100,7 @@ export default function SaleForm() {
     })
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     if (!canSave) return
@@ -119,8 +114,10 @@ export default function SaleForm() {
         selling: Number(product.selling) || 0
       }))
 
-    const inventory = getInventoryItems()
-    const currentSale = editingId ? getSalesRecords().find((record) => record.id === editingId) : null
+    setError('')
+    const inventory = await getCloudInventoryItems()
+    const currentSales = await getCloudSalesRecords()
+    const currentSale = editingId ? currentSales.find((record) => record.id === editingId) : null
 
     if (currentSale) {
       const restoredInventory = inventory.map((item) => {
@@ -153,7 +150,7 @@ export default function SaleForm() {
         return { ...item, quantity: currentQuantity }
       })
 
-      saveInventoryItems(nextInventory)
+      await Promise.all(nextInventory.map((item) => saveCloudInventoryItem(item)))
     } else {
       const nextInventory = inventory.map((item) => {
         let currentQuantity = Number(item.quantity || 0)
@@ -170,7 +167,7 @@ export default function SaleForm() {
         return { ...item, quantity: currentQuantity }
       })
 
-      saveInventoryItems(nextInventory)
+      await Promise.all(nextInventory.map((item) => saveCloudInventoryItem(item)))
     }
 
     const saleRecord: SaleRecord = {
@@ -189,13 +186,12 @@ export default function SaleForm() {
       createdAt: new Date().toISOString()
     }
 
-    const existingSales = getSalesRecords()
-    const nextSales = editingId
-      ? existingSales.map((sale) => (sale.id === editingId ? saleRecord : sale))
-      : [saleRecord, ...existingSales]
-
-    saveSalesRecords(nextSales)
-    navigate('/sales')
+    try {
+      await saveCloudSale(saleRecord)
+      navigate('/sales')
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save sale.')
+    }
   }
 
   const canSave =
@@ -206,6 +202,7 @@ export default function SaleForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
       <section className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="form-label">Customer Name *</label>

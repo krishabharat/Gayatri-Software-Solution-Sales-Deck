@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import EmptyState from '../components/EmptyState/EmptyState'
-import { formatCurrency, getSalesRecords, saveSalesRecords, type SaleRecord } from '../utils/storage'
+import { formatCurrency, type SaleRecord } from '../utils/storage'
+import { deleteCloudSale, getCloudSalesRecords } from '../utils/cloudStorage'
 
 const filters = ['Search', 'Date', 'Payment']
 
@@ -9,15 +10,22 @@ export default function Sales() {
   const navigate = useNavigate()
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setSales(getSalesRecords())
+    getCloudSalesRecords()
+      .then(setSales)
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load sales.'))
   }, [])
 
-  const handleDelete = (saleId: string) => {
-    const nextSales = getSalesRecords().filter((sale) => sale.id !== saleId)
-    saveSalesRecords(nextSales)
-    setSales(nextSales)
+  const handleDelete = async (saleId: string) => {
+    try {
+      setError('')
+      await deleteCloudSale(saleId)
+      setSales((currentSales) => currentSales.filter((sale) => sale.id !== saleId))
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete sale.')
+    }
   }
 
   const openInvoice = (sale: SaleRecord) => setSelectedSale(sale)
@@ -39,6 +47,7 @@ export default function Sales() {
       </header>
 
       <div className="app-surface p-4 sm:p-6">
+        {error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
         <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-[#e8f1ee] bg-[#f7fffc] p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2">
             {filters.map((filter) => (

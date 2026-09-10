@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { InventoryItem, ProductMasterItem } from './storage'
+import type { InventoryItem, ProductMasterItem, SaleProduct, SaleRecord } from './storage'
 
 export function describeCloudError(error: unknown, fallback: string) {
   if (error && typeof error === 'object') {
@@ -47,6 +47,24 @@ function toProductMasterItem(row: Record<string, unknown>): ProductMasterItem {
     defaultCost: Number(row.default_cost || 0),
     defaultSellingPrice: Number(row.default_selling_price || 0),
     minimumStockLevel: Number(row.minimum_stock_level || 0),
+    createdAt: String(row.created_at || new Date().toISOString())
+  }
+}
+
+function toSaleRecord(row: Record<string, unknown>, products: SaleProduct[]): SaleRecord {
+  return {
+    id: String(row.id),
+    customerName: String(row.customer_name || ''),
+    mobile: String(row.mobile || ''),
+    saleDate: String(row.sale_date || ''),
+    paymentStatus: row.payment_status as SaleRecord['paymentStatus'],
+    discount: Number(row.discount || 0),
+    amountPaid: Number(row.amount_paid || 0),
+    products,
+    totalPlates: Number(row.total_plates || 0),
+    subtotal: Number(row.subtotal || 0),
+    grandTotal: Number(row.grand_total || 0),
+    remaining: Number(row.remaining || 0),
     createdAt: String(row.created_at || new Date().toISOString())
   }
 }
@@ -104,4 +122,64 @@ export async function getCloudProductMasterItems() {
   const { data, error } = await client.from('products').select('*').order('created_at', { ascending: false })
   if (error) throw error
   return (data || []).map((row) => toProductMasterItem(row))
+}
+
+export async function getCloudSalesRecords(): Promise<SaleRecord[]> {
+  const client = requireSupabase()
+  const { data: sales, error: salesError } = await client.from('sales').select('*').order('created_at', { ascending: false })
+  if (salesError) throw salesError
+  const { data: products, error: productsError } = await client.from('sale_products').select('*')
+  if (productsError) throw productsError
+
+  return (sales || []).map((sale) => toSaleRecord(
+    sale,
+    (products || [])
+      .filter((product) => product.sale_id === sale.id)
+      .map((product) => ({
+        id: String(product.product_id),
+        name: String(product.product_name || ''),
+        quantity: Number(product.quantity || 0),
+        selling: Number(product.selling || 0)
+      }))
+  ))
+}
+
+export async function saveCloudSale(sale: SaleRecord) {
+  const client = requireSupabase()
+  const { error: saleError } = await client.from('sales').upsert({
+    id: sale.id,
+    customer_name: sale.customerName,
+    mobile: sale.mobile,
+    sale_date: sale.saleDate,
+    payment_status: sale.paymentStatus,
+    discount: sale.discount,
+    amount_paid: sale.amountPaid,
+    total_plates: sale.totalPlates,
+    subtotal: sale.subtotal,
+    grand_total: sale.grandTotal,
+    remaining: sale.remaining,
+    created_at: sale.createdAt
+  })
+  if (saleError) throw saleError
+
+  const { error: deleteProductsError } = await client.from('sale_products').delete().eq('sale_id', sale.id)
+  if (deleteProductsError) throw deleteProductsError
+
+  const { error: productsError } = await client.from('sale_products').insert(
+    sale.products.map((product) => ({
+      id: `${sale.id}-${product.id}`,
+      sale_id: sale.id,
+      product_id: product.id,
+      product_name: product.name,
+      quantity: product.quantity,
+      selling: product.selling
+    }))
+  )
+  if (productsError) throw productsError
+}
+
+export async function deleteCloudSale(id: string) {
+  const client = requireSupabase()
+  const { error } = await client.from('sales').delete().eq('id', id)
+  if (error) throw error
 }
