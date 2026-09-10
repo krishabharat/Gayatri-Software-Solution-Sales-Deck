@@ -92,7 +92,13 @@ export default function AddInventory() {
   }
 
   return (
-    <div className="space-y-6">
+    <form
+      className="space-y-6 pb-24"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void handleSave()
+      }}
+    >
       <header>
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7d8d89]">Inventory</div>
         <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-slate-800">{isEditing ? 'Edit Inventory' : 'Add Inventory'}</h2>
@@ -160,13 +166,15 @@ export default function AddInventory() {
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#eadff2] bg-white/95 p-3 shadow-[0_-12px_30px_rgba(52,31,63,0.12)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-6 sm:shadow-none">
+          <div className="mx-auto flex max-w-[1600px] flex-col gap-3 sm:flex-row sm:justify-end">
           <button type="button" className="secondary-btn" onClick={() => navigate('/inventory')}>Cancel</button>
-          <button type="button" disabled={!canSave} onClick={handleSave} className={`primary-btn ${!canSave ? 'cursor-not-allowed opacity-60' : ''}`}>
+          <button type="submit" disabled={!canSave} className={`primary-btn ${!canSave ? 'cursor-not-allowed opacity-60' : ''}`}>
             {isEditing ? 'Update Inventory' : 'Save Inventory'}
           </button>
+          </div>
         </div>
       </div>
-    </div>
+    </form>
   )
 }
