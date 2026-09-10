@@ -1,21 +1,34 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import EmptyState from '../components/EmptyState/EmptyState'
-import { formatCurrency, getInventoryItems, saveInventoryItems, type InventoryItem } from '../utils/storage'
+import { formatCurrency, type InventoryItem } from '../utils/storage'
+import { deleteCloudInventoryItem, getCloudInventoryItems } from '../utils/cloudStorage'
 
 export default function Inventory() {
   const [items, setItems] = useState<InventoryItem[]>([])
+  const [error, setError] = useState('')
 
-  const refreshItems = () => setItems(getInventoryItems())
+  const refreshItems = async () => {
+    try {
+      setError('')
+      setItems(await getCloudInventoryItems())
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load inventory from Supabase.')
+    }
+  }
 
   useEffect(() => {
-    refreshItems()
+    void refreshItems()
   }, [])
 
-  const handleDelete = (id: string) => {
-    const nextItems = items.filter((item) => item.id !== id)
-    setItems(nextItems)
-    saveInventoryItems(nextItems)
+  const handleDelete = async (id: string) => {
+    try {
+      setError('')
+      await deleteCloudInventoryItem(id)
+      setItems((currentItems) => currentItems.filter((item) => item.id !== id))
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete inventory.')
+    }
   }
 
   const totalProducts = items.length
@@ -54,6 +67,12 @@ export default function Inventory() {
           </div>
         ))}
       </section>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {error}
+        </div>
+      )}
 
       <section className="app-surface p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between">

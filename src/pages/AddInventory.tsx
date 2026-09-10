@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getInventoryItems, getProductMasterItems, saveInventoryItems, saveProductMasterItems, type InventoryItem, type ProductMasterItem } from '../utils/storage'
+import { getCloudInventoryItems, getCloudProductMasterItems, saveCloudInventoryItem, saveCloudProductMasterItem } from '../utils/cloudStorage'
+import { type InventoryItem, type ProductMasterItem } from '../utils/storage'
 
 export default function AddInventory() {
   const navigate = useNavigate()
@@ -14,23 +15,28 @@ export default function AddInventory() {
   const [sellingCost, setSellingCost] = useState(0)
   const [transportCost, setTransportCost] = useState(0)
   const [type, setType] = useState('Purchased')
+  const [error, setError] = useState('')
 
   const isEditing = Boolean(editingId)
 
   useEffect(() => {
     if (!editingId) return
 
-    const item = getInventoryItems().find((record) => record.id === editingId)
-    if (!item) return
+    getCloudInventoryItems()
+      .then((items) => items.find((record) => record.id === editingId))
+      .then((item) => {
+        if (!item) return
 
-    setDate(item.date || '')
-    setProductId(item.productId || '')
-    setProductName(item.productName || '')
-    setQuantity(Number(item.quantity || 0))
-    setCostPerSheet(Number(item.costPerSheet || 0))
-    setSellingCost(Number(item.sellingCost || 0))
-    setTransportCost(Number(item.transportCost || 0))
-    setType(item.type || 'Purchased')
+        setDate(item.date || '')
+        setProductId(item.productId || '')
+        setProductName(item.productName || '')
+        setQuantity(Number(item.quantity || 0))
+        setCostPerSheet(Number(item.costPerSheet || 0))
+        setSellingCost(Number(item.sellingCost || 0))
+        setTransportCost(Number(item.transportCost || 0))
+        setType(item.type || 'Purchased')
+      })
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load inventory.'))
   }, [editingId])
 
   const materialCost = useMemo(() => quantity * costPerSheet, [quantity, costPerSheet])
@@ -38,11 +44,11 @@ export default function AddInventory() {
 
   const canSave = date && productId && quantity > 0 && costPerSheet > 0 && type
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave) return
 
-    const existing = getInventoryItems()
-    const payload: Omit<InventoryItem, 'id'> & { id?: string } = {
+    setError('')
+    const payload: InventoryItem = {
       id: editingId || `${Date.now()}`,
       date,
       productId,
@@ -57,32 +63,32 @@ export default function AddInventory() {
       createdAt: new Date().toISOString()
     }
 
-    const nextInventory = isEditing
-      ? existing.map((item) => (item.id === editingId ? { ...item, ...payload } : item))
-      : [...existing, payload as InventoryItem]
+    try {
+      await saveCloudInventoryItem(payload)
 
-    saveInventoryItems(nextInventory)
+      const productList = await getCloudProductMasterItems()
+      const productExists = productList.some((item) => item.productId === productId || item.productName === productName)
 
-    const productList = getProductMasterItems()
-    const productExists = productList.some((item) => item.productId === productId || item.productName === productName)
+      if (!productExists && (productId || productName)) {
+        const nextProduct: ProductMasterItem = {
+          id: `${Date.now()}-product`,
+          productId,
+          productName: productName || 'Unnamed Product',
+          category: 'General',
+          unit: 'Sheet',
+          defaultCost: costPerSheet,
+          defaultSellingPrice: sellingCost || costPerSheet,
+          minimumStockLevel: 0,
+          createdAt: new Date().toISOString()
+        }
 
-    if (!productExists && (productId || productName)) {
-      const nextProduct: ProductMasterItem = {
-        id: `${Date.now()}-product`,
-        productId,
-        productName: productName || 'Unnamed Product',
-        category: 'General',
-        unit: 'Sheet',
-        defaultCost: costPerSheet,
-        defaultSellingPrice: sellingCost || costPerSheet,
-        minimumStockLevel: 0,
-        createdAt: new Date().toISOString()
+        await saveCloudProductMasterItem(nextProduct)
       }
 
-      saveProductMasterItems([...productList, nextProduct])
+      navigate('/inventory')
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save inventory.')
     }
-
-    navigate('/inventory')
   }
 
   return (
@@ -93,6 +99,11 @@ export default function AddInventory() {
       </header>
 
       <div className="app-surface p-4 sm:p-6">
+        {error && (
+          <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {error}
+          </div>
+        )}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="form-label">Date *</label>
