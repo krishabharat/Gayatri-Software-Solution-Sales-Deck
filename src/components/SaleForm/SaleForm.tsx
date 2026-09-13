@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import ProductRow from './ProductRow'
-import { getCloudInventoryItems, getCloudSalesRecords, saveCloudInventoryItem, saveCloudSale } from '../../utils/cloudStorage'
+import { describeCloudError, getCloudInventoryItems, getCloudSalesRecords, saveCloudInventoryItem, saveCloudSale } from '../../utils/cloudStorage'
 import { type InventoryItem, type SaleRecord } from '../../utils/storage'
 
 type Product = {
@@ -165,7 +165,7 @@ export default function SaleForm() {
       await Promise.all(adjustedInventory.map((item) => saveCloudInventoryItem(item)))
       navigate('/sales')
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save sale.')
+      setError(describeCloudError(saveError, 'Unable to save sale.'))
     } finally {
       setIsSaving(false)
     }

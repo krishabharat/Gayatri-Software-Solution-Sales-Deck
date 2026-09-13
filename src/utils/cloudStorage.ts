@@ -10,6 +10,12 @@ export function describeCloudError(error: unknown, fallback: string) {
     if (details.code === '42501' || details.message?.toLowerCase().includes('row-level security')) {
       return `${fallback} Supabase permissions are blocking this action. Run the latest RLS policy SQL from supabase/schema.sql.`
     }
+    if (details.code === '23503') {
+      return `${fallback} A linked database record is missing. Check that the sales and sale_products tables were created from the latest schema.`
+    }
+    if (details.code === '23505') {
+      return `${fallback} This sale ID already exists. Please refresh the form and try again.`
+    }
     const parts = [details.message, details.details, details.hint, details.code].filter(Boolean)
     if (parts.length > 0) return parts.join(' — ')
   }
