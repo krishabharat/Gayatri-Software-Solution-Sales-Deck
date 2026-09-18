@@ -42,7 +42,7 @@ export default function AddInventory() {
   const materialCost = useMemo(() => quantity * costPerSheet, [quantity, costPerSheet])
   const totalCost = materialCost + transportCost
 
-  const canSave = date && productId && quantity > 0 && costPerSheet > 0 && type
+  const canSave = date && productId && quantity >= 0 && costPerSheet > 0 && type
 
   const handleSave = async () => {
     if (!canSave) return
