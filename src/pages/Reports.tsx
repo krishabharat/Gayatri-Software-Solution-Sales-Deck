@@ -71,7 +71,7 @@ export default function Reports() {
 
   const profitMetrics = {
     revenue: salesMetrics.totalSales,
-    productCost: filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.selling, 0), 0),
+    productCost: filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0), 0),
     transportCost: inventoryMetrics.transportCost,
     estimatedProfit: salesMetrics.totalSales - filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0), 0) - inventoryMetrics.transportCost - expenseTotal
   }
