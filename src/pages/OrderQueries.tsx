@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { deleteCloudOrderQuery, describeCloudError, getCloudInventoryItems, getCloudOrderQueries, saveCloudOrderQuery, saveCloudSale } from '../utils/cloudStorage'
+import { deleteCloudOrderQuery, describeCloudError, getCloudInventoryItems, getCloudOrderQueries, saveCloudInventoryItem, saveCloudOrderQuery, saveCloudSale } from '../utils/cloudStorage'
 import type { InventoryItem, OrderQuery, OrderQueryProduct, SaleRecord } from '../utils/storage'
 
 const stages: OrderQuery['stage'][] = ['Order', 'To Pickup', 'To Deliver', 'Delivered']
@@ -54,7 +54,9 @@ export default function OrderQueries() {
     setSaving(true); setError('')
     try {
       const orderId = editingId || `${Date.now()}`
-      let saleId = orders.find((order) => order.id === editingId)?.saleId
+      const existingOrder = orders.find((order) => order.id === editingId)
+      const hadSale = Boolean(existingOrder?.saleId)
+      let saleId = existingOrder?.saleId
       if (stage === 'Delivered') {
         saleId = saleId || `sale-${orderId}`
         const sale: SaleRecord = {
@@ -65,6 +67,12 @@ export default function OrderQueries() {
           createdAt: new Date().toISOString()
         }
         await saveCloudSale(sale)
+        if (!hadSale) {
+          await Promise.all(inventoryItems.map((item) => {
+            const soldQuantity = products.filter((product) => product.id === item.productId).reduce((sum, product) => sum + product.quantity, 0)
+            return soldQuantity > 0 ? saveCloudInventoryItem({ ...item, quantity: Math.max(0, item.quantity - soldQuantity) }) : Promise.resolve()
+          }))
+        }
       }
       await saveCloudOrderQuery({
         id: orderId, saleId, customerName, mobile, withCover, withoutCover, orderDate, deliveryDate,
