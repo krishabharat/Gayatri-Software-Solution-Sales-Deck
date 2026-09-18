@@ -1,4 +1,5 @@
 import { formatCurrency, getInventoryItems, getSalesRecords } from '../utils/storage'
+import { useMemo, useState } from 'react'
 
 const filters = ['Today', 'This Week', 'This Month', 'Last Month', 'Custom Range']
 
@@ -6,26 +7,59 @@ export default function Reports() {
   const sales = getSalesRecords()
   const inventory = getInventoryItems()
   const hasData = sales.length > 0 || inventory.length > 0
+  const [selectedFilter, setSelectedFilter] = useState('This Month')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+
+  const filteredData = useMemo(() => {
+    const now = new Date()
+    const today = now.toISOString().slice(0, 10)
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay())
+    const weekStart = startOfWeek.toISOString().slice(0, 10)
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastMonthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}-01`
+    const lastMonthEnd = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth(), 0).getDate()).padStart(2, '0')}`
+
+    let start = ''
+    let end = today
+    if (selectedFilter === 'Today') start = today
+    if (selectedFilter === 'This Week') start = weekStart
+    if (selectedFilter === 'This Month') start = monthStart
+    if (selectedFilter === 'Last Month') { start = lastMonthStart; end = lastMonthEnd }
+    if (selectedFilter === 'Custom Range') { start = customStart; end = customEnd || today }
+
+    const inRange = (date: string) => (!start || date >= start) && (!end || date <= end)
+    return {
+      sales: sales.filter((sale) => inRange(sale.saleDate)),
+      inventory: inventory.filter((item) => inRange(item.date))
+    }
+  }, [customEnd, customStart, inventory, sales, selectedFilter])
+
+  const filteredSales = filteredData.sales
+  const filteredInventory = filteredData.inventory
+  const filteredHasData = filteredSales.length > 0 || filteredInventory.length > 0
 
   const salesMetrics = {
-    totalSales: sales.reduce((sum, sale) => sum + sale.grandTotal, 0),
-    totalPlates: sales.reduce((sum, sale) => sum + sale.totalPlates, 0),
-    paid: sales.filter((sale) => sale.paymentStatus === 'Paid').reduce((sum, sale) => sum + sale.grandTotal, 0),
-    unpaid: sales.filter((sale) => sale.paymentStatus !== 'Paid').reduce((sum, sale) => sum + sale.remaining, 0),
-    customers: new Set(sales.map((sale) => sale.customerName)).size
+    totalSales: filteredSales.reduce((sum, sale) => sum + sale.grandTotal, 0),
+    totalPlates: filteredSales.reduce((sum, sale) => sum + sale.totalPlates, 0),
+    paid: filteredSales.filter((sale) => sale.paymentStatus === 'Paid').reduce((sum, sale) => sum + sale.grandTotal, 0),
+    unpaid: filteredSales.filter((sale) => sale.paymentStatus !== 'Paid').reduce((sum, sale) => sum + sale.remaining, 0),
+    customers: new Set(filteredSales.map((sale) => sale.customerName)).size
   }
 
   const inventoryMetrics = {
-    totalStock: inventory.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
-    inventoryValue: inventory.reduce((sum, item) => sum + Number(item.totalCost || 0), 0),
-    purchases: inventory.filter((item) => item.type === 'Purchased').reduce((sum, item) => sum + Number(item.totalCost || 0), 0),
-    transportCost: inventory.reduce((sum, item) => sum + Number(item.transportCost || 0), 0),
-    lowStock: inventory.filter((item) => Number(item.quantity || 0) <= 0).length
+    totalStock: filteredInventory.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+    inventoryValue: filteredInventory.reduce((sum, item) => sum + Number(item.totalCost || 0), 0),
+    purchases: filteredInventory.filter((item) => item.type === 'Purchased').reduce((sum, item) => sum + Number(item.totalCost || 0), 0),
+    transportCost: filteredInventory.reduce((sum, item) => sum + Number(item.transportCost || 0), 0),
+    lowStock: filteredInventory.filter((item) => Number(item.quantity || 0) <= 0).length
   }
 
   const profitMetrics = {
     revenue: salesMetrics.totalSales,
-    productCost: sales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.selling, 0), 0),
+    productCost: filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.selling, 0), 0),
     transportCost: inventoryMetrics.transportCost,
     estimatedProfit: Math.max(0, salesMetrics.totalSales - inventoryMetrics.transportCost)
   }
@@ -49,9 +83,16 @@ export default function Reports() {
       <div className="app-surface p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">
           {filters.map((filter) => (
-            <button key={filter} className="filter-chip" type="button">{filter}</button>
+            <button key={filter} className={`filter-chip ${selectedFilter === filter ? 'border-[#0f6b63] bg-[#eafaf5] text-[#0f6b63]' : ''}`} type="button" onClick={() => setSelectedFilter(filter)}>{filter}</button>
           ))}
         </div>
+        {selectedFilter === 'Custom Range' && (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div><label className="form-label">From</label><input type="date" className="form-input" value={customStart} onChange={(event) => setCustomStart(event.target.value)} /></div>
+            <div><label className="form-label">To</label><input type="date" className="form-input" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} /></div>
+          </div>
+        )}
+        <div className="mt-3 text-xs font-semibold text-slate-500">Showing: {selectedFilter}{selectedFilter === 'Custom Range' && customStart ? ` (${customStart} to ${customEnd || 'today'})` : ''}</div>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -59,41 +100,41 @@ export default function Reports() {
           <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Sales Report</div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              ['Total Sales', hasData ? formatCurrency(salesMetrics.totalSales) : '₹0'],
-              ['Total Plates', hasData ? String(salesMetrics.totalPlates) : '0'],
-              ['Paid', hasData ? formatCurrency(salesMetrics.paid) : '₹0'],
-              ['Unpaid', hasData ? formatCurrency(salesMetrics.unpaid) : '₹0'],
-              ['Customers', hasData ? String(salesMetrics.customers) : '0']
+              ['Total Sales', filteredHasData ? formatCurrency(salesMetrics.totalSales) : '₹0'],
+              ['Total Plates', filteredHasData ? String(salesMetrics.totalPlates) : '0'],
+              ['Paid', filteredHasData ? formatCurrency(salesMetrics.paid) : '₹0'],
+              ['Unpaid', filteredHasData ? formatCurrency(salesMetrics.unpaid) : '₹0'],
+              ['Customers', filteredHasData ? String(salesMetrics.customers) : '0']
             ].map(([label, value]) => renderMetric(label, value))}
           </div>
-          {!hasData && <div className="empty-panel mt-4 min-h-[140px]"><div className="text-sm text-slate-500">No report data available yet</div></div>}
+          {!filteredHasData && <div className="empty-panel mt-4 min-h-[140px]"><div className="text-sm text-slate-500">{hasData ? 'No data in this date range' : 'No report data available yet'}</div></div>}
         </div>
 
         <div className="app-surface p-5 sm:p-6">
           <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Inventory Report</div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              ['Total Stock', hasData ? String(inventoryMetrics.totalStock) : '0'],
-              ['Inventory Value', hasData ? formatCurrency(inventoryMetrics.inventoryValue) : '₹0'],
-              ['Purchases', hasData ? formatCurrency(inventoryMetrics.purchases) : '₹0'],
-              ['Transport Cost', hasData ? formatCurrency(inventoryMetrics.transportCost) : '₹0'],
-              ['Low Stock', hasData ? String(inventoryMetrics.lowStock) : '0']
+              ['Total Stock', filteredHasData ? String(inventoryMetrics.totalStock) : '0'],
+              ['Inventory Value', filteredHasData ? formatCurrency(inventoryMetrics.inventoryValue) : '₹0'],
+              ['Purchases', filteredHasData ? formatCurrency(inventoryMetrics.purchases) : '₹0'],
+              ['Transport Cost', filteredHasData ? formatCurrency(inventoryMetrics.transportCost) : '₹0'],
+              ['Low Stock', filteredHasData ? String(inventoryMetrics.lowStock) : '0']
             ].map(([label, value]) => renderMetric(label, value))}
           </div>
-          {!hasData && <div className="empty-panel mt-4 min-h-[140px]"><div className="text-sm text-slate-500">No report data available yet</div></div>}
+          {!filteredHasData && <div className="empty-panel mt-4 min-h-[140px]"><div className="text-sm text-slate-500">{hasData ? 'No data in this date range' : 'No report data available yet'}</div></div>}
         </div>
 
         <div className="app-surface p-5 sm:p-6">
           <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Profit Report</div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              ['Revenue', hasData ? formatCurrency(profitMetrics.revenue) : '₹0'],
-              ['Product Cost', hasData ? formatCurrency(profitMetrics.productCost) : '₹0'],
-              ['Transport Cost', hasData ? formatCurrency(profitMetrics.transportCost) : '₹0'],
-              ['Estimated Profit', hasData ? formatCurrency(profitMetrics.estimatedProfit) : '₹0']
+              ['Revenue', filteredHasData ? formatCurrency(profitMetrics.revenue) : '₹0'],
+              ['Product Cost', filteredHasData ? formatCurrency(profitMetrics.productCost) : '₹0'],
+              ['Transport Cost', filteredHasData ? formatCurrency(profitMetrics.transportCost) : '₹0'],
+              ['Estimated Profit', filteredHasData ? formatCurrency(profitMetrics.estimatedProfit) : '₹0']
             ].map(([label, value]) => renderMetric(label, value))}
           </div>
-          {!hasData && <div className="empty-panel mt-4 min-h-[140px]"><div className="text-sm text-slate-500">No report data available yet</div></div>}
+          {!filteredHasData && <div className="empty-panel mt-4 min-h-[140px]"><div className="text-sm text-slate-500">{hasData ? 'No data in this date range' : 'No report data available yet'}</div></div>}
         </div>
       </div>
     </div>
