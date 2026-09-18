@@ -6,6 +6,8 @@ const navItems = [
   { to: '/inventory', label: 'INVENTORY', icon: 'inventory' },
   { to: '/orders', label: 'QUERIES', icon: 'orders' },
   { to: '/expenses', label: 'EXPENSES', icon: 'expenses' },
+  { to: '/customers', label: 'CUSTOMERS', icon: 'customers' },
+  { to: '/suppliers', label: 'SUPPLIERS', icon: 'suppliers' },
   { to: '/reports', label: 'REPORTS', icon: 'reports' }
 ]
 
@@ -13,6 +15,8 @@ const iconMap: Record<string, React.ReactNode> = {
   home: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-7H9v7H5a1 1 0 0 1-1-1v-8.5Z" /></svg>
   ),
+  customers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><circle cx="9" cy="8" r="3" /><path d="M3 19a6 6 0 0 1 12 0M16 11a3 3 0 0 1 5 2.2M17 19h4" /></svg>,
+  suppliers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 8h16v12H4zM7 8V5h10v3M8 12h8M8 16h5" /></svg>,
   sales: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M6 7.5h12M6 12h12M6 16.5h8" /><path d="M18 16.5h.01" /></svg>
   ),

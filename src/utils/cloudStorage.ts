@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { BusinessExpense, InventoryItem, OrderQuery, ProductMasterItem, SaleProduct, SaleRecord } from './storage'
+import type { BusinessExpense, Customer, InventoryItem, OrderQuery, ProductMasterItem, SaleProduct, SaleRecord, Supplier } from './storage'
 
 export function describeCloudError(error: unknown, fallback: string) {
   if (error && typeof error === 'object') {
@@ -38,6 +38,7 @@ function toInventoryItem(row: Record<string, unknown>): InventoryItem {
     date: String(row.date),
     productId: String(row.product_id || ''),
     productName: String(row.product_name || ''),
+    supplierName: String(row.supplier_name || ''),
     quantity: Number(row.quantity || 0),
     costPerSheet: Number(row.cost_per_sheet || 0),
     sellingCost: Number(row.selling_cost || 0),
@@ -95,6 +96,7 @@ export async function saveCloudInventoryItem(item: InventoryItem) {
     date: item.date,
     product_id: item.productId,
     product_name: item.productName,
+    supplier_name: item.supplierName || '',
     quantity: item.quantity,
     cost_per_sheet: item.costPerSheet,
     selling_cost: item.sellingCost,
@@ -110,6 +112,44 @@ export async function saveCloudInventoryItem(item: InventoryItem) {
 export async function deleteCloudInventoryItem(id: string) {
   const client = requireSupabase()
   const { error } = await client.from('inventory').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function getCloudCustomers(): Promise<Customer[]> {
+  const client = requireSupabase()
+  const { data, error } = await client.from('customers').select('*').order('name')
+  if (error) throw error
+  return (data || []).map((row) => ({ id: String(row.id), name: String(row.name || ''), mobile: String(row.mobile || ''), createdAt: String(row.created_at || '') }))
+}
+
+export async function saveCloudCustomer(customer: Customer) {
+  const client = requireSupabase()
+  const { error } = await client.from('customers').upsert({ id: customer.id, name: customer.name, mobile: customer.mobile, created_at: customer.createdAt })
+  if (error) throw error
+}
+
+export async function deleteCloudCustomer(id: string) {
+  const client = requireSupabase()
+  const { error } = await client.from('customers').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function getCloudSuppliers(): Promise<Supplier[]> {
+  const client = requireSupabase()
+  const { data, error } = await client.from('suppliers').select('*').order('name')
+  if (error) throw error
+  return (data || []).map((row) => ({ id: String(row.id), name: String(row.name || ''), mobile: String(row.mobile || ''), createdAt: String(row.created_at || '') }))
+}
+
+export async function saveCloudSupplier(supplier: Supplier) {
+  const client = requireSupabase()
+  const { error } = await client.from('suppliers').upsert({ id: supplier.id, name: supplier.name, mobile: supplier.mobile || '', created_at: supplier.createdAt })
+  if (error) throw error
+}
+
+export async function deleteCloudSupplier(id: string) {
+  const client = requireSupabase()
+  const { error } = await client.from('suppliers').delete().eq('id', id)
   if (error) throw error
 }
 

@@ -1,11 +1,23 @@
-import { formatCurrency, getInventoryItems, getSalesRecords } from '../utils/storage'
-import { useMemo, useState } from 'react'
+import { formatCurrency, type InventoryItem, type SaleRecord } from '../utils/storage'
+import { useEffect, useMemo, useState } from 'react'
+import { describeCloudError, getCloudBusinessExpenses, getCloudInventoryItems, getCloudOrderQueries, getCloudSalesRecords } from '../utils/cloudStorage'
 
 const filters = ['Today', 'This Week', 'This Month', 'Last Month', 'Custom Range']
 
 export default function Reports() {
-  const sales = getSalesRecords()
-  const inventory = getInventoryItems()
+  const [sales, setSales] = useState<SaleRecord[]>([])
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [expenseTotal, setExpenseTotal] = useState(0)
+  const [loadError, setLoadError] = useState('')
+  useEffect(() => {
+    Promise.all([getCloudSalesRecords(), getCloudInventoryItems(), getCloudBusinessExpenses(), getCloudOrderQueries()])
+      .then(([loadedSales, loadedInventory, expenses]) => {
+        setSales(loadedSales)
+        setInventory(loadedInventory)
+        setExpenseTotal(expenses.reduce((sum, item) => sum + item.amount, 0))
+      })
+      .catch((error) => setLoadError(describeCloudError(error, 'Unable to load cloud report data.')))
+  }, [])
   const hasData = sales.length > 0 || inventory.length > 0
   const [selectedFilter, setSelectedFilter] = useState('This Month')
   const [customStart, setCustomStart] = useState('')
@@ -61,7 +73,7 @@ export default function Reports() {
     revenue: salesMetrics.totalSales,
     productCost: filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.selling, 0), 0),
     transportCost: inventoryMetrics.transportCost,
-    estimatedProfit: Math.max(0, salesMetrics.totalSales - inventoryMetrics.transportCost)
+    estimatedProfit: salesMetrics.totalSales - filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0), 0) - inventoryMetrics.transportCost - expenseTotal
   }
 
   const renderMetric = (label: string, value: string) => (
@@ -79,6 +91,7 @@ export default function Reports() {
           <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-slate-800">Reports</h2>
         </div>
       </header>
+      {loadError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{loadError}</div>}
 
       <div className="app-surface p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">

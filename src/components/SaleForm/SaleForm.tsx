@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import ProductRow from './ProductRow'
-import { describeCloudError, getCloudInventoryItems, getCloudSalesRecords, saveCloudInventoryItem, saveCloudSale } from '../../utils/cloudStorage'
-import { type InventoryItem, type SaleRecord } from '../../utils/storage'
+import { describeCloudError, getCloudCustomers, getCloudInventoryItems, getCloudSalesRecords, saveCloudInventoryItem, saveCloudSale } from '../../utils/cloudStorage'
+import { type Customer, type InventoryItem, type SaleRecord } from '../../utils/storage'
 
 type Product = {
   id?: string
@@ -20,6 +20,7 @@ export default function SaleForm() {
   const editingId = searchParams.get('id')
   const isEditing = Boolean(editingId)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [customerName, setCustomerName] = useState('')
   const [mobile, setMobile] = useState('')
@@ -32,9 +33,10 @@ export default function SaleForm() {
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    Promise.all([getCloudInventoryItems(), editingId ? getCloudSalesRecords() : Promise.resolve([] as SaleRecord[])])
-      .then(([inventory, sales]) => {
+    Promise.all([getCloudInventoryItems(), getCloudCustomers(), editingId ? getCloudSalesRecords() : Promise.resolve([] as SaleRecord[])])
+      .then(([inventory, loadedCustomers, sales]) => {
         setInventoryItems(inventory)
+        setCustomers(loadedCustomers)
         const sale = sales.find((record) => record.id === editingId)
         if (!sale) return
         setCustomerName(sale.customerName || '')
@@ -97,10 +99,11 @@ export default function SaleForm() {
     setProducts((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== index) : prev))
   }
 
-  const handleSelectInventory = (index: number, option: { id: string; name: string; selling: number }) => {
+  const handleSelectInventory = (index: number, option: { id: string; name: string; purchaseCost: number; selling: number }) => {
     updateProduct(index, {
       id: option.id,
       name: option.name,
+      purchaseCost: option.purchaseCost,
       selling: option.selling
     })
   }
@@ -192,7 +195,11 @@ export default function SaleForm() {
       <section className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="form-label">Customer Name *</label>
-          <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="form-input" placeholder="Customer Name" />
+          <select value={customerName} onChange={(e) => { const customer = customers.find((item) => item.name === e.target.value); setCustomerName(e.target.value); if (customer) setMobile(customer.mobile) }} className="form-input">
+            <option value="">Select saved customer</option>
+            {customers.map((customer) => <option key={customer.id} value={customer.name}>{customer.name}</option>)}
+          </select>
+          <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="form-input mt-2" placeholder="Or type new customer name" />
         </div>
         <div>
           <label className="form-label">Mobile Number *</label>

@@ -3,6 +3,7 @@ export type InventoryItem = {
   date: string
   productId: string
   productName: string
+  supplierName?: string
   quantity: number
   costPerSheet: number
   sellingCost: number
@@ -12,6 +13,9 @@ export type InventoryItem = {
   totalCost: number
   createdAt?: string
 }
+
+export type Customer = { id: string; name: string; mobile: string; createdAt: string }
+export type Supplier = { id: string; name: string; mobile?: string; createdAt: string }
 
 export type ProductMasterItem = {
   id: string

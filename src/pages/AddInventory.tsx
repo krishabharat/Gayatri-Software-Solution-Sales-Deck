@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { describeCloudError, getCloudInventoryItems, getCloudProductMasterItems, saveCloudInventoryItem, saveCloudProductMasterItem } from '../utils/cloudStorage'
-import { type InventoryItem, type ProductMasterItem } from '../utils/storage'
+import { describeCloudError, getCloudInventoryItems, getCloudProductMasterItems, getCloudSuppliers, saveCloudInventoryItem, saveCloudProductMasterItem } from '../utils/cloudStorage'
+import { type InventoryItem, type ProductMasterItem, type Supplier } from '../utils/storage'
 
 export default function AddInventory() {
   const navigate = useNavigate()
@@ -10,6 +10,8 @@ export default function AddInventory() {
   const [date, setDate] = useState('')
   const [productId, setProductId] = useState('')
   const [productName, setProductName] = useState('')
+  const [supplierName, setSupplierName] = useState('')
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [quantity, setQuantity] = useState(0)
   const [costPerSheet, setCostPerSheet] = useState(0)
   const [sellingCost, setSellingCost] = useState(0)
@@ -20,6 +22,7 @@ export default function AddInventory() {
   const isEditing = Boolean(editingId)
 
   useEffect(() => {
+    getCloudSuppliers().then(setSuppliers).catch(() => setSuppliers([]))
     if (!editingId) return
 
     getCloudInventoryItems()
@@ -30,6 +33,7 @@ export default function AddInventory() {
         setDate(item.date || '')
         setProductId(item.productId || '')
         setProductName(item.productName || '')
+        setSupplierName(item.supplierName || '')
         setQuantity(Number(item.quantity || 0))
         setCostPerSheet(Number(item.costPerSheet || 0))
         setSellingCost(Number(item.sellingCost || 0))
@@ -53,6 +57,7 @@ export default function AddInventory() {
       date,
       productId,
       productName,
+      supplierName,
       quantity,
       costPerSheet,
       sellingCost,
@@ -132,6 +137,14 @@ export default function AddInventory() {
           <div>
             <label className="form-label">Product Name</label>
             <input value={productName} onChange={(e) => setProductName(e.target.value)} className="form-input" placeholder="Product Name" />
+          </div>
+
+          <div>
+            <label className="form-label">Supplier</label>
+            <select value={supplierName} onChange={(e) => setSupplierName(e.target.value)} className="form-input">
+              <option value="">Select supplier</option>
+              {suppliers.map((supplier) => <option key={supplier.id} value={supplier.name}>{supplier.name}</option>)}
+            </select>
           </div>
 
           <div>

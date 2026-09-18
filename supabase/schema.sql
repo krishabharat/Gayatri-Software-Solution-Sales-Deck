@@ -15,6 +15,7 @@ create table if not exists public.inventory (
   date date not null,
   product_id text not null,
   product_name text not null default '',
+  supplier_name text not null default '',
   quantity numeric not null default 0,
   cost_per_sheet numeric not null default 0,
   selling_cost numeric not null default 0,
@@ -22,6 +23,22 @@ create table if not exists public.inventory (
   type text not null,
   material_cost numeric not null default 0,
   total_cost numeric not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.inventory add column if not exists supplier_name text not null default '';
+
+create table if not exists public.customers (
+  id text primary key,
+  name text not null,
+  mobile text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.suppliers (
+  id text primary key,
+  name text not null,
+  mobile text not null default '',
   created_at timestamptz not null default now()
 );
 
@@ -92,6 +109,8 @@ create table if not exists public.business_expenses (
 
 alter table public.products enable row level security;
 alter table public.inventory enable row level security;
+alter table public.customers enable row level security;
+alter table public.suppliers enable row level security;
 alter table public.sales enable row level security;
 alter table public.sale_products enable row level security;
 alter table public.order_queries enable row level security;
@@ -100,6 +119,8 @@ alter table public.business_expenses enable row level security;
 
 create policy "public products access" on public.products for all using (true) with check (true);
 create policy "public inventory access" on public.inventory for all using (true) with check (true);
+create policy "public customers access" on public.customers for all using (true) with check (true);
+create policy "public suppliers access" on public.suppliers for all using (true) with check (true);
 create policy "public sales access" on public.sales for all using (true) with check (true);
 create policy "public sale products access" on public.sale_products for all using (true) with check (true);
 create policy "public order queries access" on public.order_queries for all using (true) with check (true);

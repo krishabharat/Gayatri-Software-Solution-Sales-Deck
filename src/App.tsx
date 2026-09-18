@@ -11,6 +11,7 @@ import AddInventory from './pages/AddInventory'
 import Reports from './pages/Reports'
 import OrderQueries from './pages/OrderQueries'
 import BusinessExpenses from './pages/BusinessExpenses'
+import MasterData from './pages/MasterData'
 
 export default function App() {
   return (
@@ -36,6 +37,8 @@ export default function App() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/orders" element={<OrderQueries />} />
               <Route path="/expenses" element={<BusinessExpenses />} />
+              <Route path="/customers" element={<MasterData mode="customers" />} />
+              <Route path="/suppliers" element={<MasterData mode="suppliers" />} />
             </Routes>
           </main>
         </div>
