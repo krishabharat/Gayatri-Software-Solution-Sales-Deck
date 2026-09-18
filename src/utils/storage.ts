@@ -29,6 +29,7 @@ export type SaleProduct = {
   id: string
   name: string
   quantity: number
+  purchaseCost: number
   selling: number
 }
 
@@ -52,11 +53,13 @@ export type OrderQueryProduct = {
   id: string
   name: string
   quantity: number
+  purchaseCost: number
   selling: number
 }
 
 export type OrderQuery = {
   id: string
+  saleId?: string
   customerName: string
   mobile: string
   withCover: number

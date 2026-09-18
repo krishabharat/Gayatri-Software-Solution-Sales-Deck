@@ -43,13 +43,6 @@ export default function Topbar() {
             />
           </div>
 
-          <button aria-label="Notifications" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e8dff1] bg-white text-slate-600 transition hover:bg-[#f6f0ff]">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" /><path d="M10 19a2 2 0 0 0 4 0" /></svg>
-          </button>
-
-          <button aria-label="Profile settings" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e8dff1] bg-[#412653] text-white shadow-sm transition hover:bg-[#341d42]">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M12 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-7 7a7 7 0 0 1 14 0" /></svg>
-          </button>
         </div>
       </div>
     </header>

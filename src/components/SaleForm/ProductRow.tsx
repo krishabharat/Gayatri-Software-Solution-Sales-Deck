@@ -2,12 +2,14 @@ type Product = {
   id?: string
   name?: string
   quantity?: number
+  purchaseCost?: number
   selling?: number
 }
 
 type InventoryOption = {
   id: string
   name: string
+  purchaseCost: number
   selling: number
 }
 
@@ -69,6 +71,11 @@ export default function ProductRow({ index, product, inventoryOptions, onChange,
         <div>
           <label className="form-label">Quantity / Total Plates</label>
           <input type="number" min={0} value={product.quantity ?? ''} onChange={(e) => onChange(index, { quantity: Number(e.target.value) })} className="form-input" placeholder="0" />
+        </div>
+
+        <div>
+          <label className="form-label">Purchase Cost</label>
+          <input type="number" min={0} step="0.01" value={product.purchaseCost ?? ''} onChange={(e) => onChange(index, { purchaseCost: Number(e.target.value) })} className="form-input" placeholder="₹0" />
         </div>
 
         <div>

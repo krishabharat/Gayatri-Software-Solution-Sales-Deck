@@ -8,6 +8,7 @@ type Product = {
   id?: string
   name?: string
   quantity?: number
+  purchaseCost?: number
   selling?: number
 }
 
@@ -51,7 +52,7 @@ export default function SaleForm() {
   const maxProducts = 8
 
   const inventoryOptions = useMemo(() => {
-    const unique = new Map<string, { id: string; name: string; selling: number }>()
+    const unique = new Map<string, { id: string; name: string; purchaseCost: number; selling: number }>()
 
     inventoryItems.forEach((item) => {
       const itemId = String(item.productId || '').trim()
@@ -64,6 +65,7 @@ export default function SaleForm() {
         unique.set(key, {
           id: itemId || itemName,
           name: itemName || itemId || 'Unnamed product',
+          purchaseCost: Number(item.costPerSheet || 0),
           selling: Number(item.sellingCost || item.costPerSheet || 0)
         })
       }
@@ -118,6 +120,7 @@ export default function SaleForm() {
           id: String(product.id || `product-${index + 1}`).trim(),
           name: String(product.name || `Product ${index + 1}`).trim(),
           quantity: Number(product.quantity) || 0,
+          purchaseCost: Number(product.purchaseCost) || 0,
           selling: Number(product.selling) || 0
         }))
 

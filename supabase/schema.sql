@@ -46,11 +46,15 @@ create table if not exists public.sale_products (
   product_id text not null,
   product_name text not null,
   quantity numeric not null default 0,
+  purchase_cost numeric not null default 0,
   selling numeric not null default 0
 );
 
+alter table public.sale_products add column if not exists purchase_cost numeric not null default 0;
+
 create table if not exists public.order_queries (
   id text primary key,
+  sale_id text,
   customer_name text not null,
   mobile text not null,
   with_cover numeric not null default 0,
@@ -65,6 +69,8 @@ create table if not exists public.order_queries (
   remaining numeric not null default 0,
   created_at timestamptz not null default now()
 );
+
+alter table public.order_queries add column if not exists sale_id text;
 
 create table if not exists public.order_query_products (
   id text primary key,

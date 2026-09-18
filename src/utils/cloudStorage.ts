@@ -151,6 +151,7 @@ export async function getCloudSalesRecords(): Promise<SaleRecord[]> {
         id: String(product.product_id),
         name: String(product.product_name || ''),
         quantity: Number(product.quantity || 0),
+        purchaseCost: Number(product.purchase_cost || 0),
         selling: Number(product.selling || 0)
       }))
   ))
@@ -184,6 +185,7 @@ export async function saveCloudSale(sale: SaleRecord) {
       product_id: product.id,
       product_name: product.name,
       quantity: product.quantity,
+      purchase_cost: product.purchaseCost,
       selling: product.selling
     }))
   )
@@ -199,6 +201,7 @@ export async function deleteCloudSale(id: string) {
 function toOrderQuery(row: Record<string, unknown>, products: OrderQuery['products']): OrderQuery {
   return {
     id: String(row.id),
+    saleId: row.sale_id ? String(row.sale_id) : undefined,
     customerName: String(row.customer_name || ''),
     mobile: String(row.mobile || ''),
     withCover: Number(row.with_cover || 0),
@@ -228,6 +231,7 @@ export async function getCloudOrderQueries(): Promise<OrderQuery[]> {
     id: String(item.product_id),
     name: String(item.product_name || ''),
     quantity: Number(item.quantity || 0),
+    purchaseCost: Number(item.purchase_cost || 0),
     selling: Number(item.selling || 0)
   }))))
 }
@@ -236,6 +240,7 @@ export async function saveCloudOrderQuery(order: OrderQuery) {
   const client = requireSupabase()
   const { error } = await client.from('order_queries').upsert({
     id: order.id, customer_name: order.customerName, mobile: order.mobile,
+    sale_id: order.saleId || null,
     with_cover: order.withCover, without_cover: order.withoutCover,
     order_date: order.orderDate, delivery_date: order.deliveryDate, stage: order.stage,
     payment_method: order.paymentMethod, advance_payment: order.advancePayment,
@@ -247,7 +252,7 @@ export async function saveCloudOrderQuery(order: OrderQuery) {
   if (deleteError) throw deleteError
   const { error: productsError } = await client.from('order_query_products').insert(order.products.map((product) => ({
     id: `${order.id}-${product.id}`, order_id: order.id, product_id: product.id,
-    product_name: product.name, quantity: product.quantity, selling: product.selling
+    product_name: product.name, quantity: product.quantity, purchase_cost: product.purchaseCost, selling: product.selling
   })))
   if (productsError) throw productsError
 }
