@@ -7,7 +7,9 @@ const titleMap: Record<string, string> = {
   '/inventory': 'Inventory',
   '/inventory/add': 'Add Inventory',
   '/inventory/product-master': 'Product Master',
-  '/reports': 'Reports'
+  '/reports': 'Reports',
+  '/orders': 'User Query / Orders',
+  '/expenses': 'Business Expenses'
 }
 
 export default function Topbar() {
