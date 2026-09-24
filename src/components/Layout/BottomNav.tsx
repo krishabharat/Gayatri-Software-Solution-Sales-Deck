@@ -4,8 +4,7 @@ import { useState } from 'react'
 const primaryItems = [
   { to: '/home', label: 'HOME', icon: 'home' },
   { to: '/sales', label: 'SALES', icon: 'sales' },
-  { to: '/inventory', label: 'INVENTORY', icon: 'inventory' },
-  { to: '/reports', label: 'REPORTS', icon: 'reports' }
+  { to: '/inventory', label: 'INVENTORY', icon: 'inventory' }
 ]
 
 const toolItems = [
@@ -67,7 +66,7 @@ export default function BottomNav() {
       </aside>
 
       <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[22px] border border-[#e3efec] bg-white/95 p-2 shadow-[0_20px_40px_rgba(10,40,35,0.12)] backdrop-blur md:hidden">
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-4 gap-1">
         {primaryItems.map((item) => (
           <NavLink
             key={item.to}
