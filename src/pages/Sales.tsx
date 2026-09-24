@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import EmptyState from '../components/EmptyState/EmptyState'
 import { formatCurrency, type SaleRecord } from '../utils/storage'
-import { deleteCloudSale, getCloudSalesRecords } from '../utils/cloudStorage'
+import { deleteCloudSale, getCloudSalesRecords, migrateLegacySaleIds } from '../utils/cloudStorage'
 
 const filters = ['Search', 'Date', 'Payment']
 
@@ -12,6 +12,7 @@ export default function Sales() {
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [isMigratingIds, setIsMigratingIds] = useState(false)
   const [searchParams] = useSearchParams()
   const search = (searchParams.get('search') || '').trim().toLowerCase()
 
@@ -40,6 +41,22 @@ export default function Sales() {
     navigate(`/sales/new?id=${saleId}`)
   }
 
+  const handleMigrateIds = async () => {
+    if (isMigratingIds) return
+    setIsMigratingIds(true)
+    setError('')
+    try {
+      const migratedCount = await migrateLegacySaleIds()
+      const refreshedSales = await getCloudSalesRecords()
+      setSales(refreshedSales)
+      setError(migratedCount > 0 ? `Updated ${migratedCount} old sale ID${migratedCount === 1 ? '' : 's'} to the new format.` : 'All sale IDs already use the new format.')
+    } catch (migrationError) {
+      setError(migrationError instanceof Error ? migrationError.message : 'Unable to update old sale IDs.')
+    } finally {
+      setIsMigratingIds(false)
+    }
+  }
+
   const filteredSales = useMemo(() => {
     if (!search) return sales
     return sales.filter((sale) => [
@@ -57,7 +74,12 @@ export default function Sales() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7d8d89]">Sales management</div>
           <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-slate-800">Sales</h2>
         </div>
-        <Link to="/sales/new" className="primary-btn w-full sm:w-auto">+ New Sale</Link>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button type="button" onClick={() => void handleMigrateIds()} disabled={isMigratingIds} className="secondary-btn w-full sm:w-auto">
+            {isMigratingIds ? 'UPDATING IDS...' : 'UPDATE OLD IDS'}
+          </button>
+          <Link to="/sales/new" className="primary-btn w-full sm:w-auto">+ New Sale</Link>
+        </div>
       </header>
 
       <div className="app-surface p-4 sm:p-6">

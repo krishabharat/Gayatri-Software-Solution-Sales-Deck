@@ -228,6 +228,81 @@ export async function getNextInvoiceId(saleDate: string) {
   return `${prefix}${String(nextSequence).padStart(5, '0')}`
 }
 
+export async function migrateLegacySaleIds(): Promise<number> {
+  const client = requireSupabase()
+  const { data: sales, error: salesError } = await client
+    .from('sales')
+    .select('id, sale_date, created_at')
+    .order('sale_date', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (salesError) throw salesError
+
+  const validIdPattern = /^SG\d{8}\d{5}$/
+  const usedIds = new Set((sales || []).map((sale) => String(sale.id)).filter((id) => validIdPattern.test(id)))
+  const serialsByDate = new Map<string, number>()
+  for (const id of usedIds) {
+    const datePart = id.slice(2, 10)
+    const serial = Number(id.slice(10))
+    serialsByDate.set(datePart, Math.max(serialsByDate.get(datePart) || 0, serial))
+  }
+
+  let migrated = 0
+  for (const sale of sales || []) {
+    const oldId = String(sale.id)
+    if (validIdPattern.test(oldId)) continue
+
+    const date = String(sale.sale_date || sale.created_at || '').slice(0, 10)
+    const datePart = date.replaceAll('-', '')
+    if (!/^\d{8}$/.test(datePart)) continue
+
+    let serial = (serialsByDate.get(datePart) || 0) + 1
+    let newId = `SG${datePart}${String(serial).padStart(5, '0')}`
+    while (usedIds.has(newId)) {
+      serial += 1
+      newId = `SG${datePart}${String(serial).padStart(5, '0')}`
+    }
+    serialsByDate.set(datePart, serial)
+    usedIds.add(newId)
+
+    const { data: products, error: productsReadError } = await client
+      .from('sale_products')
+      .select('id, product_id')
+      .eq('sale_id', oldId)
+    if (productsReadError) throw productsReadError
+
+    const { error: productLinkError } = await client
+      .from('sale_products')
+      .update({ sale_id: newId })
+      .eq('sale_id', oldId)
+    if (productLinkError) throw productLinkError
+
+    const { error: queryLinkError } = await client
+      .from('order_queries')
+      .update({ sale_id: newId })
+      .eq('sale_id', oldId)
+    if (queryLinkError) throw queryLinkError
+
+    const { error: saleUpdateError } = await client
+      .from('sales')
+      .update({ id: newId })
+      .eq('id', oldId)
+    if (saleUpdateError) throw saleUpdateError
+
+    for (const product of products || []) {
+      const { error: productIdError } = await client
+        .from('sale_products')
+        .update({ id: `${newId}-${String(product.product_id)}` })
+        .eq('id', String(product.id))
+      if (productIdError) throw productIdError
+    }
+
+    migrated += 1
+  }
+
+  return migrated
+}
+
 export async function saveCloudSale(sale: SaleRecord) {
   const client = requireSupabase()
   const { error: saleError } = await client.from('sales').upsert({
