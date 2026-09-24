@@ -112,6 +112,10 @@ button, input, select, textarea {
     border-radius: 0 !important;
     background: white !important;
   }
+
+  .sales-internal-summary {
+    display: none !important;
+  }
 }
 
 .text-slate-500, .text-slate-600, .text-slate-700, .text-slate-800, .text-slate-900 {

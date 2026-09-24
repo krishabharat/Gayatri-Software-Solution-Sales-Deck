@@ -98,6 +98,9 @@ export default function Sales() {
                   <th className="py-3 pr-4">Products</th>
                   <th className="py-3 pr-4">Total Plates</th>
                   <th className="py-3 pr-4">Total Amount</th>
+                  <th className="py-3 pr-4">Cost / Plate</th>
+                  <th className="py-3 pr-4">Sell / Plate</th>
+                  <th className="py-3 pr-4">Profit</th>
                   <th className="py-3 pr-4">Payment Status</th>
                   <th className="py-3 pr-4">Actions</th>
                 </tr>
@@ -105,6 +108,12 @@ export default function Sales() {
               <tbody>
                 {filteredSales.map((sale) => (
                   <tr key={sale.id} className="border-b border-[#edf3f2] align-top">
+                    {(() => {
+                      const makingCost = sale.products.reduce((sum, product) => sum + product.quantity * product.purchaseCost, 0)
+                      const sellingTotal = sale.products.reduce((sum, product) => sum + product.quantity * product.selling, 0)
+                      const costPerPlate = sale.totalPlates > 0 ? makingCost / sale.totalPlates : 0
+                      const sellingPerPlate = sale.totalPlates > 0 ? sellingTotal / sale.totalPlates : 0
+                      return <>
                     <td className="py-3 pr-4 font-medium">{sale.id}</td>
                     <td className="py-3 pr-4">{sale.saleDate}</td>
                     <td className="py-3 pr-4">{sale.customerName}</td>
@@ -112,6 +121,9 @@ export default function Sales() {
                     <td className="py-3 pr-4">{sale.products.length}</td>
                     <td className="py-3 pr-4">{sale.totalPlates}</td>
                     <td className="py-3 pr-4">{formatCurrency(sale.grandTotal)}</td>
+                    <td className="py-3 pr-4">{formatCurrency(costPerPlate)}</td>
+                    <td className="py-3 pr-4">{formatCurrency(sellingPerPlate)}</td>
+                    <td className={`py-3 pr-4 font-semibold ${sale.grandTotal - makingCost >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(sale.grandTotal - makingCost)}</td>
                     <td className="py-3 pr-4">{sale.paymentStatus}</td>
                     <td className="py-3 pr-4">
                       <div className="flex flex-wrap gap-2">
@@ -121,6 +133,8 @@ export default function Sales() {
                         <button className="muted-btn" type="button" onClick={() => openInvoice(sale)}>Print Invoice</button>
                       </div>
                     </td>
+                      </>
+                    })()}
                   </tr>
                 ))}
               </tbody>
@@ -151,6 +165,24 @@ export default function Sales() {
                 <div className="mt-3 text-lg font-semibold text-slate-900">{selectedSale.customerName}</div>
                 <div className="mt-1 text-sm text-slate-600">{selectedSale.mobile}</div>
               </div>
+
+              {(() => {
+                const makingCost = selectedSale.products.reduce((sum, product) => sum + product.quantity * product.purchaseCost, 0)
+                const sellingTotal = selectedSale.products.reduce((sum, product) => sum + product.quantity * product.selling, 0)
+                const costPerPlate = selectedSale.totalPlates > 0 ? makingCost / selectedSale.totalPlates : 0
+                const sellingPerPlate = selectedSale.totalPlates > 0 ? sellingTotal / selectedSale.totalPlates : 0
+                return (
+                  <div className="sales-internal-summary mt-6 rounded-2xl border border-[#f1dfb7] bg-[#fffaf0] p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a641d]">Internal costing</div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <div><div className="text-xs text-slate-500">Making / plate</div><div className="mt-1 font-semibold">{formatCurrency(costPerPlate)}</div></div>
+                      <div><div className="text-xs text-slate-500">Selling / plate</div><div className="mt-1 font-semibold">{formatCurrency(sellingPerPlate)}</div></div>
+                      <div><div className="text-xs text-slate-500">Total making cost</div><div className="mt-1 font-semibold">{formatCurrency(makingCost)}</div></div>
+                      <div><div className="text-xs text-slate-500">Sale profit</div><div className={`mt-1 font-semibold ${selectedSale.grandTotal - makingCost >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(selectedSale.grandTotal - makingCost)}</div></div>
+                    </div>
+                  </div>
+                )
+              })()}
 
               <div className="rounded-2xl border border-[#e9f1ef] bg-[#f8fffc] p-4">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Payment Summary</div>

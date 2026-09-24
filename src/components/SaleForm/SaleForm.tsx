@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import ProductRow from './ProductRow'
-import { describeCloudError, getCloudCustomers, getCloudInventoryItems, getCloudSalesRecords, saveCloudInventoryItem, saveCloudSale } from '../../utils/cloudStorage'
-import { createInvoiceId, type Customer, type InventoryItem, type SaleRecord } from '../../utils/storage'
+import { describeCloudError, getCloudCustomers, getCloudInventoryItems, getCloudSalesRecords, getNextInvoiceId, saveCloudInventoryItem, saveCloudSale } from '../../utils/cloudStorage'
+import { type Customer, type InventoryItem, type SaleRecord } from '../../utils/storage'
 
 type Product = {
   id?: string
@@ -152,7 +152,7 @@ export default function SaleForm() {
       })
 
       const saleRecord: SaleRecord = {
-        id: editingId || createInvoiceId(new Date(`${saleDate}T00:00:00`)),
+        id: editingId || await getNextInvoiceId(saleDate),
         customerName,
         mobile,
         saleDate,

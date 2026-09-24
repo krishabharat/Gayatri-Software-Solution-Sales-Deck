@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { deleteCloudOrderQuery, describeCloudError, getCloudInventoryItems, getCloudOrderQueries, saveCloudInventoryItem, saveCloudOrderQuery, saveCloudSale } from '../utils/cloudStorage'
-import { createInvoiceId, type InventoryItem, type OrderQuery, type OrderQueryProduct, type SaleRecord } from '../utils/storage'
+import { deleteCloudOrderQuery, describeCloudError, getCloudInventoryItems, getCloudOrderQueries, getNextInvoiceId, saveCloudInventoryItem, saveCloudOrderQuery, saveCloudSale } from '../utils/cloudStorage'
+import { type InventoryItem, type OrderQuery, type OrderQueryProduct, type SaleRecord } from '../utils/storage'
 
 const stages: OrderQuery['stage'][] = ['Order', 'To Pickup', 'To Deliver', 'Delivered']
 
@@ -58,7 +58,7 @@ export default function OrderQueries() {
       const hadSale = Boolean(existingOrder?.saleId)
       let saleId = existingOrder?.saleId
       if (stage === 'Delivered') {
-        saleId = saleId || createInvoiceId(new Date(`${orderDate}T00:00:00`))
+        saleId = saleId || await getNextInvoiceId(orderDate)
         const sale: SaleRecord = {
           id: saleId, customerName, mobile, saleDate: orderDate,
           paymentStatus: totals.remaining <= 0 ? 'Paid' : advancePayment > 0 ? 'Partial' : 'Unpaid',

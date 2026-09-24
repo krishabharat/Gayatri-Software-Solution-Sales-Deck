@@ -140,6 +140,6 @@ export function formatCurrency(value: number) {
 
 export function createInvoiceId(date = new Date()) {
   const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
-  const sequencePart = String(Date.now()).slice(-4)
+  const sequencePart = '00001'
   return `SG${datePart}${sequencePart}`
 }
