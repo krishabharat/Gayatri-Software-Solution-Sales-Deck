@@ -1,20 +1,20 @@
-import { formatCurrency, type InventoryItem, type SaleRecord } from '../utils/storage'
+import { formatCurrency, type BusinessExpense, type InventoryItem, type SaleRecord } from '../utils/storage'
 import { useEffect, useMemo, useState } from 'react'
-import { describeCloudError, getCloudBusinessExpenses, getCloudInventoryItems, getCloudOrderQueries, getCloudSalesRecords } from '../utils/cloudStorage'
+import { describeCloudError, getCloudBusinessExpenses, getCloudInventoryItems, getCloudSalesRecords } from '../utils/cloudStorage'
 
 const filters = ['Today', 'This Week', 'This Month', 'Last Month', 'Custom Range']
 
 export default function Reports() {
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>([])
-  const [expenseTotal, setExpenseTotal] = useState(0)
+  const [expenses, setExpenses] = useState<BusinessExpense[]>([])
   const [loadError, setLoadError] = useState('')
   useEffect(() => {
-    Promise.all([getCloudSalesRecords(), getCloudInventoryItems(), getCloudBusinessExpenses(), getCloudOrderQueries()])
-      .then(([loadedSales, loadedInventory, expenses]) => {
+    Promise.all([getCloudSalesRecords(), getCloudInventoryItems(), getCloudBusinessExpenses()])
+      .then(([loadedSales, loadedInventory, loadedExpenses]) => {
         setSales(loadedSales)
         setInventory(loadedInventory)
-        setExpenseTotal(expenses.reduce((sum, item) => sum + item.amount, 0))
+        setExpenses(loadedExpenses)
       })
       .catch((error) => setLoadError(describeCloudError(error, 'Unable to load cloud report data.')))
   }, [])
@@ -45,13 +45,15 @@ export default function Reports() {
     const inRange = (date: string) => (!start || date >= start) && (!end || date <= end)
     return {
       sales: sales.filter((sale) => inRange(sale.saleDate)),
-      inventory: inventory.filter((item) => inRange(item.date))
+      inventory: inventory.filter((item) => inRange(item.date)),
+      expenses: expenses.filter((item) => inRange(item.date))
     }
-  }, [customEnd, customStart, inventory, sales, selectedFilter])
+  }, [customEnd, customStart, expenses, inventory, sales, selectedFilter])
 
   const filteredSales = filteredData.sales
   const filteredInventory = filteredData.inventory
-  const filteredHasData = filteredSales.length > 0 || filteredInventory.length > 0
+  const filteredExpenses = filteredData.expenses
+  const filteredHasData = filteredSales.length > 0 || filteredInventory.length > 0 || filteredExpenses.length > 0
 
   const salesMetrics = {
     totalSales: filteredSales.reduce((sum, sale) => sum + sale.grandTotal, 0),
@@ -73,7 +75,11 @@ export default function Reports() {
     revenue: salesMetrics.totalSales,
     productCost: filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0), 0),
     transportCost: inventoryMetrics.transportCost,
-    estimatedProfit: salesMetrics.totalSales - filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0), 0) - inventoryMetrics.transportCost - expenseTotal
+    expenses: filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0),
+    estimatedProfit: salesMetrics.totalSales -
+      filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0), 0) -
+      inventoryMetrics.transportCost -
+      filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
   }
 
   const renderMetric = (label: string, value: string) => (
@@ -144,6 +150,7 @@ export default function Reports() {
               ['Revenue', filteredHasData ? formatCurrency(profitMetrics.revenue) : '₹0'],
               ['Product Cost', filteredHasData ? formatCurrency(profitMetrics.productCost) : '₹0'],
               ['Transport Cost', filteredHasData ? formatCurrency(profitMetrics.transportCost) : '₹0'],
+              ['Expenses', filteredHasData ? formatCurrency(profitMetrics.expenses) : '₹0'],
               ['Estimated Profit', filteredHasData ? formatCurrency(profitMetrics.estimatedProfit) : '₹0']
             ].map(([label, value]) => renderMetric(label, value))}
           </div>
