@@ -49,13 +49,13 @@ export default function Topbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <form onSubmit={submitSearch} className="hidden items-center gap-2 rounded-xl border border-[#e9dff1] bg-[#faf7ff] px-3 py-2 sm:flex">
+          <form onSubmit={submitSearch} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#e9dff1] bg-[#faf7ff] px-2 py-2 sm:px-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
             <input
               placeholder="Search customer, mobile, invoice..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-40 border-0 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+              className="w-24 min-w-0 border-0 bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 sm:w-40 sm:text-sm"
             />
           </form>
 
