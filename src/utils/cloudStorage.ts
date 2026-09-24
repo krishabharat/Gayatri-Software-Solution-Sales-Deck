@@ -209,6 +209,25 @@ export async function getCloudSalesRecords(): Promise<SaleRecord[]> {
   ))
 }
 
+export async function getNextInvoiceId(saleDate: string) {
+  const client = requireSupabase()
+  const datePart = saleDate.replaceAll('-', '')
+  const prefix = `SG${datePart}`
+  const { data, error } = await client
+    .from('sales')
+    .select('id')
+    .like('id', `${prefix}%`)
+    .order('id', { ascending: false })
+    .limit(1)
+
+  if (error) throw error
+
+  const latestId = data?.[0]?.id ? String(data[0].id) : ''
+  const latestSequence = latestId.startsWith(prefix) ? Number(latestId.slice(prefix.length)) : 0
+  const nextSequence = Number.isFinite(latestSequence) ? latestSequence + 1 : 1
+  return `${prefix}${String(nextSequence).padStart(5, '0')}`
+}
+
 export async function saveCloudSale(sale: SaleRecord) {
   const client = requireSupabase()
   const { error: saleError } = await client.from('sales').upsert({
