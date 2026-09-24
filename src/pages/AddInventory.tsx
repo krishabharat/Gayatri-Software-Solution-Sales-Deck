@@ -98,7 +98,7 @@ export default function AddInventory() {
 
   return (
     <form
-      className="space-y-6 pb-24"
+      className="space-y-6 pb-32"
       onSubmit={(event) => {
         event.preventDefault()
         void handleSave()
@@ -179,7 +179,7 @@ export default function AddInventory() {
           </div>
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#eadff2] bg-white/95 p-3 shadow-[0_-12px_30px_rgba(52,31,63,0.12)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-6 sm:shadow-none">
+        <div className="fixed inset-x-0 bottom-24 z-[60] border-t border-[#eadff2] bg-white/95 p-3 shadow-[0_-12px_30px_rgba(52,31,63,0.12)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-6 sm:shadow-none">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-3 sm:flex-row sm:justify-end">
           <button type="button" className="secondary-btn" onClick={() => navigate('/inventory')}>Cancel</button>
           <button type="submit" disabled={!canSave} className={`primary-btn ${!canSave ? 'cursor-not-allowed opacity-60' : ''}`}>

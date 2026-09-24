@@ -184,7 +184,7 @@ export default function SaleForm() {
     products.some((product) => Number(product.quantity) > 0)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-24 sm:pb-0">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-32 sm:pb-0">
       {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
       {isLoading && <div className="rounded-2xl border border-[#d9eee8] bg-[#f3fbf8] px-4 py-3 text-sm font-semibold text-[#285d50]">Loading inventory from the cloud...</div>}
       {!isLoading && !error && inventoryOptions.length === 0 && (
@@ -307,7 +307,7 @@ export default function SaleForm() {
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#eadff2] bg-white/95 p-3 shadow-[0_-12px_30px_rgba(52,31,63,0.12)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:shadow-none">
+      <div className="fixed inset-x-0 bottom-24 z-[60] border-t border-[#eadff2] bg-white/95 p-3 shadow-[0_-12px_30px_rgba(52,31,63,0.12)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:shadow-none">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-3 sm:flex-row sm:justify-end">
         <button type="button" className="secondary-btn" onClick={() => navigate('/sales')}>Cancel</button>
         <button type="submit" disabled={!canSave || isSaving} className={`primary-btn ${!canSave || isSaving ? 'cursor-not-allowed opacity-60' : ''}`}>
