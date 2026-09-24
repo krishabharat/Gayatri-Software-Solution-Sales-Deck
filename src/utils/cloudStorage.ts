@@ -16,6 +16,12 @@ export function describeCloudError(error: unknown, fallback: string) {
     if (details.code === '23505') {
       return `${fallback} This sale ID already exists. Please refresh the form and try again.`
     }
+    if (details.code === 'PGRST204' || details.message?.toLowerCase().includes('schema cache')) {
+      return `${fallback} Supabase is missing a required column. Run the latest migration SQL in supabase/schema.sql, then run notify pgrst, 'reload schema'; and wait 30 seconds before retrying.`
+    }
+    if (details.code === 'PGRST205') {
+      return `${fallback} Supabase is missing a required table. Run the latest migration SQL in supabase/schema.sql, then run notify pgrst, 'reload schema'; and wait 30 seconds before retrying.`
+    }
     const parts = [details.message, details.details, details.hint, details.code].filter(Boolean)
     if (parts.length > 0) return parts.join(' — ')
   }
