@@ -232,7 +232,7 @@ export async function migrateLegacySaleIds(): Promise<number> {
   const client = requireSupabase()
   const { data: sales, error: salesError } = await client
     .from('sales')
-    .select('id, sale_date, created_at')
+    .select('*')
     .order('sale_date', { ascending: true })
     .order('created_at', { ascending: true })
 
@@ -267,15 +267,23 @@ export async function migrateLegacySaleIds(): Promise<number> {
 
     const { data: products, error: productsReadError } = await client
       .from('sale_products')
-      .select('id, product_id')
+      .select('*')
       .eq('sale_id', oldId)
     if (productsReadError) throw productsReadError
 
-    const { error: productLinkError } = await client
-      .from('sale_products')
-      .update({ sale_id: newId })
-      .eq('sale_id', oldId)
-    if (productLinkError) throw productLinkError
+    const { id: ignoredId, ...saleData } = sale
+    const { error: copiedSaleError } = await client
+      .from('sales')
+      .insert({ ...saleData, id: newId })
+    if (copiedSaleError) throw copiedSaleError
+
+    if (products && products.length > 0) {
+      const { error: productLinkError } = await client
+        .from('sale_products')
+        .update({ sale_id: newId })
+        .eq('sale_id', oldId)
+      if (productLinkError) throw productLinkError
+    }
 
     const { error: queryLinkError } = await client
       .from('order_queries')
@@ -283,11 +291,11 @@ export async function migrateLegacySaleIds(): Promise<number> {
       .eq('sale_id', oldId)
     if (queryLinkError) throw queryLinkError
 
-    const { error: saleUpdateError } = await client
+    const { error: oldSaleDeleteError } = await client
       .from('sales')
-      .update({ id: newId })
+      .delete()
       .eq('id', oldId)
-    if (saleUpdateError) throw saleUpdateError
+    if (oldSaleDeleteError) throw oldSaleDeleteError
 
     for (const product of products || []) {
       const { error: productIdError } = await client
