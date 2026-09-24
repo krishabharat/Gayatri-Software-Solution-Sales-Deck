@@ -1,13 +1,25 @@
 import { Link } from 'react-router-dom'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import EmptyState from '../components/EmptyState/EmptyState'
-import { formatCurrency, getInventoryItems, getSalesRecords } from '../utils/storage'
-
-const today = new Date().toISOString().slice(0, 10)
+import { formatCurrency, type InventoryItem, type SaleRecord } from '../utils/storage'
+import { describeCloudError, getCloudBusinessExpenses, getCloudInventoryItems, getCloudSalesRecords } from '../utils/cloudStorage'
 
 export default function Home() {
-  const sales = getSalesRecords()
-  const inventoryItems = getInventoryItems()
+  const today = new Date().toISOString().slice(0, 10)
+  const [sales, setSales] = useState<SaleRecord[]>([])
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [expenseTotal, setExpenseTotal] = useState(0)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    Promise.all([getCloudSalesRecords(), getCloudInventoryItems(), getCloudBusinessExpenses()])
+      .then(([loadedSales, loadedInventory, expenses]) => {
+        setSales(loadedSales)
+        setInventoryItems(loadedInventory)
+        setExpenseTotal(expenses.reduce((sum, expense) => sum + expense.amount, 0))
+      })
+      .catch((loadError) => setError(describeCloudError(loadError, 'Unable to load dashboard data.')))
+  }, [])
 
   const kpis = useMemo(() => {
     const todaysSales = sales.filter((sale) => sale.saleDate === today)
@@ -16,7 +28,7 @@ export default function Home() {
     const pendingPayments = sales.filter((sale) => sale.paymentStatus !== 'Paid').reduce((sum, sale) => sum + sale.remaining, 0)
     const inventoryValue = inventoryItems.reduce((sum, item) => sum + Number(item.totalCost || 0), 0)
     const totalCustomers = new Set(sales.map((sale) => sale.customerName)).size
-    const monthlyProfit = sales.reduce((sum, sale) => sum + Math.max(0, sale.grandTotal - sale.discount - sale.products.reduce((productCost, product) => productCost + product.quantity * product.selling, 0)), 0)
+    const monthlyProfit = sales.reduce((sum, sale) => sum + sale.grandTotal - sale.products.reduce((productCost, product) => productCost + product.quantity * product.purchaseCost, 0), 0) - expenseTotal
 
     return [
       { label: "Today's Sales", value: formatCurrency(todaysRevenue), note: todaysRevenue > 0 ? 'Sales recorded today' : 'No sales yet' },
@@ -26,13 +38,14 @@ export default function Home() {
       { label: 'Total Customers', value: String(totalCustomers), note: totalCustomers > 0 ? 'Active customers' : 'No customers yet' },
       { label: 'Monthly Profit', value: formatCurrency(monthlyProfit), note: monthlyProfit > 0 ? 'Estimated profit' : 'No profit data yet' }
     ]
-  }, [inventoryItems, sales])
+  }, [expenseTotal, inventoryItems, sales])
 
   const hasSales = sales.length > 0
   const hasInventory = inventoryItems.length > 0
 
   return (
     <div className="space-y-6">
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="kpi-card">

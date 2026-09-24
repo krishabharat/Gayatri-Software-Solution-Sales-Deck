@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
 import EmptyState from '../components/EmptyState/EmptyState'
 import { formatCurrency, type SaleRecord } from '../utils/storage'
 import { deleteCloudSale, getCloudSalesRecords } from '../utils/cloudStorage'
@@ -11,6 +11,8 @@ export default function Sales() {
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null)
   const [error, setError] = useState('')
+  const [searchParams] = useSearchParams()
+  const search = (searchParams.get('search') || '').trim().toLowerCase()
 
   useEffect(() => {
     getCloudSalesRecords()
@@ -36,6 +38,16 @@ export default function Sales() {
     navigate(`/sales/new?id=${saleId}`)
   }
 
+  const filteredSales = useMemo(() => {
+    if (!search) return sales
+    return sales.filter((sale) => [
+      sale.id,
+      sale.customerName,
+      sale.mobile,
+      ...sale.products.flatMap((product) => [product.id, product.name])
+    ].some((value) => value.toLowerCase().includes(search)))
+  }, [sales, search])
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -60,10 +72,10 @@ export default function Sales() {
           </div>
         </div>
 
-        {sales.length === 0 ? (
+        {filteredSales.length === 0 ? (
           <EmptyState
-            title="No sales recorded yet"
-            description="Create your first sale to start tracking your business performance."
+            title={search ? 'No matching sales found' : 'No sales recorded yet'}
+            description={search ? 'Try a customer name, mobile number, invoice ID, or product name.' : 'Create your first sale to start tracking your business performance.'}
             cta={<Link to="/sales/new" className="primary-btn">+ New Sale</Link>}
           />
         ) : (
@@ -83,9 +95,9 @@ export default function Sales() {
                 </tr>
               </thead>
               <tbody>
-                {sales.map((sale) => (
+                {filteredSales.map((sale) => (
                   <tr key={sale.id} className="border-b border-[#edf3f2] align-top">
-                    <td className="py-3 pr-4 font-medium">#{sale.id.slice(-6)}</td>
+                    <td className="py-3 pr-4 font-medium">{sale.id}</td>
                     <td className="py-3 pr-4">{sale.saleDate}</td>
                     <td className="py-3 pr-4">{sale.customerName}</td>
                     <td className="py-3 pr-4">{sale.mobile}</td>
@@ -119,7 +131,7 @@ export default function Sales() {
                 <div className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Industries</div>
               </div>
               <div className="text-left text-sm text-slate-600 sm:text-right">
-                <div><span className="font-semibold text-slate-800">Invoice #</span> {selectedSale.id.slice(-6)}</div>
+                <div><span className="font-semibold text-slate-800">Invoice #</span> {selectedSale.id}</div>
                 <div><span className="font-semibold text-slate-800">Date:</span> {selectedSale.saleDate}</div>
                 <div><span className="font-semibold text-slate-800">Status:</span> {selectedSale.paymentStatus}</div>
               </div>

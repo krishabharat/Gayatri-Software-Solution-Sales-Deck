@@ -1,4 +1,5 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
 
 const titleMap: Record<string, string> = {
   '/home': 'Business Overview',
@@ -16,11 +17,20 @@ const titleMap: Record<string, string> = {
 
 export default function Topbar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('search') || '')
   const today = new Date().toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric'
   })
+
+  const submitSearch = (event: React.FormEvent) => {
+    event.preventDefault()
+    const value = search.trim()
+    navigate(value ? `/sales?search=${encodeURIComponent(value)}` : '/sales')
+  }
 
   return (
     <header className="border-b border-[#eadff2] bg-white/90 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
@@ -39,13 +49,15 @@ export default function Topbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-2 rounded-xl border border-[#e9dff1] bg-[#faf7ff] px-3 py-2 sm:flex">
+          <form onSubmit={submitSearch} className="hidden items-center gap-2 rounded-xl border border-[#e9dff1] bg-[#faf7ff] px-3 py-2 sm:flex">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
             <input
-              placeholder="Search"
+              placeholder="Search customer, mobile, invoice..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
               className="w-40 border-0 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
             />
-          </div>
+          </form>
 
         </div>
       </div>
