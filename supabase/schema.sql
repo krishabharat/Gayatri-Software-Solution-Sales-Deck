@@ -69,6 +69,9 @@ create table if not exists public.sale_products (
 
 alter table public.sale_products add column if not exists purchase_cost numeric not null default 0;
 
+create index if not exists sales_created_at_idx on public.sales (created_at desc);
+create index if not exists sale_products_sale_id_idx on public.sale_products (sale_id);
+
 create table if not exists public.order_queries (
   id text primary key,
   sale_id text,

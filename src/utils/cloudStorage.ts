@@ -178,22 +178,34 @@ export async function getCloudProductMasterItems() {
 
 export async function getCloudSalesRecords(): Promise<SaleRecord[]> {
   const client = requireSupabase()
-  const { data: sales, error: salesError } = await client.from('sales').select('*').order('created_at', { ascending: false })
+  const [{ data: sales, error: salesError }, { data: products, error: productsError }] = await Promise.all([
+    client
+      .from('sales')
+      .select('id, customer_name, mobile, sale_date, payment_status, discount, amount_paid, total_plates, subtotal, grand_total, remaining, created_at')
+      .order('created_at', { ascending: false }),
+    client
+      .from('sale_products')
+      .select('sale_id, product_id, product_name, quantity, purchase_cost, selling')
+  ])
   if (salesError) throw salesError
-  const { data: products, error: productsError } = await client.from('sale_products').select('*')
   if (productsError) throw productsError
+
+  const productsBySale = new Map<string, SaleProduct[]>()
+  for (const product of products || []) {
+    const saleProducts = productsBySale.get(product.sale_id) || []
+    saleProducts.push({
+      id: String(product.product_id),
+      name: String(product.product_name || ''),
+      quantity: Number(product.quantity || 0),
+      purchaseCost: Number(product.purchase_cost || 0),
+      selling: Number(product.selling || 0)
+    })
+    productsBySale.set(product.sale_id, saleProducts)
+  }
 
   return (sales || []).map((sale) => toSaleRecord(
     sale,
-    (products || [])
-      .filter((product) => product.sale_id === sale.id)
-      .map((product) => ({
-        id: String(product.product_id),
-        name: String(product.product_name || ''),
-        quantity: Number(product.quantity || 0),
-        purchaseCost: Number(product.purchase_cost || 0),
-        selling: Number(product.selling || 0)
-      }))
+    productsBySale.get(sale.id) || []
   ))
 }
 

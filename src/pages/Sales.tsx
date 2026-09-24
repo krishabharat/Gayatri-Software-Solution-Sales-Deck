@@ -11,6 +11,7 @@ export default function Sales() {
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null)
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
   const [searchParams] = useSearchParams()
   const search = (searchParams.get('search') || '').trim().toLowerCase()
 
@@ -18,6 +19,7 @@ export default function Sales() {
     getCloudSalesRecords()
       .then(setSales)
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load sales.'))
+      .finally(() => setIsLoading(false))
   }, [])
 
   const handleDelete = async (saleId: string) => {
@@ -72,7 +74,13 @@ export default function Sales() {
           </div>
         </div>
 
-        {filteredSales.length === 0 ? (
+        {isLoading ? (
+          <div className="empty-panel" role="status" aria-live="polite">
+            <div className="mb-3 h-8 w-8 animate-spin rounded-full border-4 border-[#dcefe9] border-t-[#0f6b63]" />
+            <div className="text-base font-medium text-slate-700">Loading sales...</div>
+            <div className="mt-1 text-sm text-slate-500">Getting the latest records from the cloud.</div>
+          </div>
+        ) : filteredSales.length === 0 ? (
           <EmptyState
             title={search ? 'No matching sales found' : 'No sales recorded yet'}
             description={search ? 'Try a customer name, mobile number, invoice ID, or product name.' : 'Create your first sale to start tracking your business performance.'}
