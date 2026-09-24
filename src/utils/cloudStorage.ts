@@ -297,14 +297,6 @@ export async function migrateLegacySaleIds(): Promise<number> {
       .eq('id', oldId)
     if (oldSaleDeleteError) throw oldSaleDeleteError
 
-    for (const product of products || []) {
-      const { error: productIdError } = await client
-        .from('sale_products')
-        .update({ id: `${newId}-${String(product.product_id)}` })
-        .eq('id', String(product.id))
-      if (productIdError) throw productIdError
-    }
-
     migrated += 1
   }
 

@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import EmptyState from '../components/EmptyState/EmptyState'
 import { formatCurrency, type SaleRecord } from '../utils/storage'
-import { deleteCloudSale, getCloudSalesRecords, migrateLegacySaleIds } from '../utils/cloudStorage'
+import { deleteCloudSale, describeCloudError, getCloudSalesRecords, migrateLegacySaleIds } from '../utils/cloudStorage'
 
 const filters = ['Search', 'Date', 'Payment']
 
@@ -51,7 +51,7 @@ export default function Sales() {
       setSales(refreshedSales)
       setError(migratedCount > 0 ? `Updated ${migratedCount} old sale ID${migratedCount === 1 ? '' : 's'} to the new format.` : 'All sale IDs already use the new format.')
     } catch (migrationError) {
-      setError(migrationError instanceof Error ? migrationError.message : 'Unable to update old sale IDs.')
+      setError(describeCloudError(migrationError, 'Unable to update old sale IDs.'))
     } finally {
       setIsMigratingIds(false)
     }
