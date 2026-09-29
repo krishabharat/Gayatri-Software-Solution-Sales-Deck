@@ -277,7 +277,8 @@ export async function migrateLegacySaleIds(): Promise<number> {
       .eq('sale_id', oldId)
     if (productsReadError) throw productsReadError
 
-    const { id: ignoredId, ...saleData } = sale
+    const saleData = { ...sale }
+    delete saleData.id
     const { error: copiedSaleError } = await client
       .from('sales')
       .insert({ ...saleData, id: newId })

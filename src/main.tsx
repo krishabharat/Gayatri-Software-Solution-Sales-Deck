@@ -1,15 +1,18 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import App from './App'
 import './index.css'
 
+const Router = Capacitor.isNativePlatform() ? HashRouter : BrowserRouter
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/*" element={<App />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   </React.StrictMode>
 )

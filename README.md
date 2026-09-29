@@ -30,3 +30,27 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+# Android app (APK)
+
+This React application can be packaged for Android with Capacitor. Cloud features continue to use the configured Supabase project and require an internet connection.
+
+## Requirements
+
+- Node.js and npm
+- Android Studio with the Android SDK installed
+- A JDK supported by the installed Android Gradle Plugin
+- A local `.env.capacitor.local` file containing the production `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Use the publishable key only. Never put a Supabase service-role key or database password in the mobile app. The Vercel environment settings are not automatically available to a local APK build.
+
+## Build and open the Android project
+
+```sh
+npm install
+npm run android:sync
+npm run android:open
+```
+
+In Android Studio, wait for Gradle sync to finish, then use **Build > Build Bundle(s) / APK(s) > Build APK(s)**. Android Studio will show the generated APK location.
+
+Run `npm run android:sync` again after changing app code so the Android project receives the latest web build.
