@@ -1,6 +1,7 @@
-import { formatCurrency, type BusinessExpense, type InventoryItem, type SaleRecord } from '../utils/storage'
 import { useEffect, useMemo, useState } from 'react'
-import { describeCloudError, getCloudBusinessExpenses, getCloudInventoryItems, getCloudSalesRecords } from '../utils/cloudStorage'
+import { formatCurrency, type BusinessExpense, type InventoryItem, type SaleRecord } from '../utils/storage'
+import { describeCloudError, getCloudBusinessExpenses, getCloudCustomers, getCloudInventoryItems, getCloudOrderQueries, getCloudProductMasterItems, getCloudSalesRecords, getCloudSuppliers } from '../utils/cloudStorage'
+import { downloadBusinessJsonBackup, downloadBusinessWorkbook, type BusinessExportData } from '../utils/businessExport'
 
 const filters = ['Today', 'This Week', 'This Month', 'Last Month', 'Custom Range']
 
@@ -9,6 +10,41 @@ export default function Reports() {
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [expenses, setExpenses] = useState<BusinessExpense[]>([])
   const [loadError, setLoadError] = useState('')
+  const [exportError, setExportError] = useState('')
+  const [exporting, setExporting] = useState(false)
+
+  const exportAllData = async (format: 'excel' | 'json') => {
+    if (exporting) return
+    setExporting(true)
+    setExportError('')
+    try {
+      const [loadedSales, loadedInventory, loadedExpenses, loadedQueries, loadedCustomers, loadedSuppliers, loadedProducts] = await Promise.all([
+        getCloudSalesRecords(),
+        getCloudInventoryItems(),
+        getCloudBusinessExpenses(),
+        getCloudOrderQueries(),
+        getCloudCustomers(),
+        getCloudSuppliers(),
+        getCloudProductMasterItems()
+      ])
+      const data: BusinessExportData = {
+        sales: loadedSales,
+        inventory: loadedInventory,
+        expenses: loadedExpenses,
+        queries: loadedQueries,
+        customers: loadedCustomers,
+        suppliers: loadedSuppliers,
+        products: loadedProducts
+      }
+      if (format === 'excel') downloadBusinessWorkbook(data)
+      else downloadBusinessJsonBackup(data)
+    } catch (error) {
+      setExportError(describeCloudError(error, 'Unable to export business data.'))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   useEffect(() => {
     Promise.all([getCloudSalesRecords(), getCloudInventoryItems(), getCloudBusinessExpenses()])
       .then(([loadedSales, loadedInventory, loadedExpenses]) => {
@@ -97,6 +133,19 @@ export default function Reports() {
         </div>
       </header>
       {loadError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{loadError}</div>}
+
+      <section className="app-surface flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div>
+          <div className="section-title">Protect your business records</div>
+          <p className="mt-1 max-w-2xl text-sm text-slate-600">Export all dates and all records: sales and invoice items, inventory, expenses, orders, customers, suppliers, and products. Files download directly to this device.</p>
+          {exportError && <div role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{exportError}</div>}
+        </div>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <button type="button" className="primary-btn" disabled={exporting} onClick={() => void exportAllData('excel')}>{exporting ? 'Preparing export...' : 'Download Excel backup'}</button>
+          <button type="button" className="secondary-btn" disabled={exporting} onClick={() => void exportAllData('json')}>Download JSON backup</button>
+        </div>
+      </section>
+      <p className="-mt-4 px-2 text-xs text-slate-500">Keep exported files in a private, secure location. They contain customer contact details and internal costing information.</p>
 
       <div className="app-surface p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">
