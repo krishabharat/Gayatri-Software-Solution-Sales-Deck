@@ -36,14 +36,12 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export default function Sidebar() {
   return (
-    <aside className="hidden w-[260px] flex-col border-r border-[#eadff2] bg-[#f9f4ff]/95 px-5 py-6 backdrop-blur md:flex">
+    <aside className="hidden w-[260px] flex-col border-r border-[#dce8e3] bg-[#f7faf8]/95 px-5 py-6 backdrop-blur md:flex">
       <div className="mb-8 ml-1 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#412653] text-lg font-bold text-white shadow-[0_10px_20px_rgba(65,38,83,0.25)]">
-          SG
-        </div>
+        <img src="/brand-mark.svg" alt="Sai Gayatri Industries logo" className="h-12 w-12 rounded-2xl shadow-md" />
         <div>
-          <div className="text-[11px] font-semibold tracking-[0.22em] text-[#5e4d6d]">SAI GAYATRI</div>
-          <div className="text-[10px] font-semibold tracking-[0.22em] text-[#412653]">INDUSTRIES</div>
+          <div className="text-[11px] font-bold tracking-[0.17em] text-[#174d45]">SAI GAYATRI</div>
+          <div className="text-[10px] font-semibold tracking-[0.22em] text-[#9a7840]">INDUSTRIES</div>
         </div>
       </div>
 
@@ -55,12 +53,12 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
                 isActive
-                  ? 'bg-[#f1e7ff] text-[#412653] shadow-sm'
-                  : 'text-slate-600 hover:bg-[#f7f1ff] hover:text-slate-800'
+                  ? 'bg-[#e5f2ed] text-[#174d45] shadow-sm'
+                  : 'text-slate-600 hover:bg-[#edf5f1] hover:text-slate-800'
               }`
             }
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#412653] shadow-sm">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#174d45] shadow-sm">
               {iconMap[item.icon]}
             </span>
             <span>{item.label}</span>
@@ -68,9 +66,9 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto rounded-2xl border border-[#eadff2] bg-[#f5ecff] p-4">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6a5d7b]">Operations</div>
-        <div className="mt-2 text-sm font-semibold text-[#2d1739]">Industrial service control</div>
+      <div className="mt-auto rounded-2xl border border-[#dce8e3] bg-[#edf5f1] p-4">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#55736b]">Operations</div>
+        <div className="mt-2 text-sm font-semibold text-[#174d45]">Industrial service control</div>
       </div>
     </aside>
   )

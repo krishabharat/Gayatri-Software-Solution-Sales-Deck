@@ -18,12 +18,12 @@ export default function App() {
     <div
       className="min-h-screen w-full text-slate-800"
       style={{
-        background: 'linear-gradient(135deg, #1a1022 0%, #2a1634 18%, #3d2249 38%, #f4f0f7 39%, #f4f0f7 100%)'
+        background: 'linear-gradient(135deg, #123f3a 0%, #1a5149 18%, #dce9e3 38%, #f3f7f4 39%, #f3f7f4 100%)'
       }}
     >
       <div className="mx-auto flex max-w-[1600px] px-2 py-2 sm:px-3 lg:px-4">
         <Sidebar />
-        <div className="flex min-h-screen flex-1 flex-col overflow-hidden rounded-[30px] border border-[#eadff2] bg-[#f7f3fa]/95 shadow-[0_25px_70px_rgba(18,7,21,0.18)] backdrop-blur-sm">
+        <div className="flex min-h-screen flex-1 flex-col overflow-hidden rounded-[30px] border border-[#dce8e3] bg-[#f7faf8]/95 shadow-[0_25px_70px_rgba(18,63,56,0.12)] backdrop-blur-sm">
           <Topbar />
           <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
             <Routes>

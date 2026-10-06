@@ -42,11 +42,12 @@ export default function BottomNav() {
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-[70] w-[min(86vw,320px)] transform border-r border-[#eadff2] bg-white px-5 py-6 shadow-[20px_0_50px_rgba(45,23,57,0.18)] transition-transform duration-300 md:hidden ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-[70] w-[min(86vw,320px)] transform border-r border-[#dce8e3] bg-white px-5 py-6 shadow-[20px_0_50px_rgba(18,63,58,0.18)] transition-transform duration-300 md:hidden ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <div className="text-[11px] font-semibold tracking-[0.22em] text-[#5e4d6d]">SAI GAYATRI</div>
-            <div className="text-[10px] font-semibold tracking-[0.22em] text-[#412653]">INDUSTRIES</div>
+            <img src="/brand-mark.svg" alt="" className="mb-3 h-12 w-12 rounded-2xl" />
+            <div className="text-[11px] font-semibold tracking-[0.22em] text-[#174d45]">SAI GAYATRI</div>
+            <div className="text-[10px] font-semibold tracking-[0.22em] text-[#9a7840]">INDUSTRIES</div>
           </div>
           <button type="button" aria-label="Close menu" className="muted-btn" onClick={() => setMenuOpen(false)}>Close</button>
         </div>
@@ -56,16 +57,16 @@ export default function BottomNav() {
               key={item.to}
               to={item.to}
               onClick={() => setMenuOpen(false)}
-              className={({ isActive }) => `flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${isActive ? 'bg-[#eafaf5] text-[#0f6b63]' : 'text-slate-700 hover:bg-[#f7f1ff]'}`}
+              className={({ isActive }) => `flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${isActive ? 'bg-[#e5f2ed] text-[#174d45]' : 'text-slate-700 hover:bg-[#f2f7f4]'}`}
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f7f2ff] text-[#412653]">{icons[item.icon]}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf5f1] text-[#174d45]">{icons[item.icon]}</span>
               {item.label}
             </NavLink>
           ))}
         </nav>
       </aside>
 
-      <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[22px] border border-[#e3efec] bg-white/95 p-2 shadow-[0_20px_40px_rgba(10,40,35,0.12)] backdrop-blur md:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[22px] border border-[#dce8e3] bg-white/95 p-2 shadow-[0_20px_40px_rgba(18,63,58,0.12)] backdrop-blur md:hidden">
         <div className="grid grid-cols-4 gap-1">
         {primaryItems.map((item) => (
           <NavLink
@@ -73,7 +74,7 @@ export default function BottomNav() {
             to={item.to}
             className={({ isActive }) =>
               `flex min-w-[68px] flex-col items-center justify-center rounded-xl px-2 py-2 text-[10px] font-semibold tracking-[0.08em] ${
-                isActive ? 'bg-[#eafaf5] text-[#0f6b63]' : 'text-slate-500'
+                isActive ? 'bg-[#e5f2ed] text-[#174d45]' : 'text-slate-500'
               }`
             }
           >

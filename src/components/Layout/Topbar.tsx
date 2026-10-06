@@ -33,14 +33,12 @@ export default function Topbar() {
   }
 
   return (
-    <header className="border-b border-[#eadff2] bg-white/90 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
+    <header className="border-b border-[#dce8e3] bg-white/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f1e7ff] text-lg text-[#412653] shadow-sm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 13.5 12 5l8 8.5V19a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1v-5.5Z" /></svg>
-          </div>
+          <img src="/brand-mark.svg" alt="Sai Gayatri Industries logo" className="h-11 w-11 rounded-2xl shadow-sm" />
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6d5d7f]">Operations</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#688078]">SAI GAYATRI INDUSTRIES · OPERATIONS</div>
             <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-slate-800">
               {titleMap[location.pathname] || 'Business Overview'}
             </h1>
@@ -49,7 +47,7 @@ export default function Topbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <form onSubmit={submitSearch} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#e9dff1] bg-[#faf7ff] px-2 py-2 sm:px-3">
+          <form onSubmit={submitSearch} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#dce8e3] bg-[#f7faf8] px-2 py-2 sm:px-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
             <input
               placeholder="Search customer, mobile, invoice..."
