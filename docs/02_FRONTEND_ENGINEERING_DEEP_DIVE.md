@@ -1,6 +1,9 @@
 # 📓 Chapter 02: Frontend Engineering Deep Dive
 
-## 1. React 19 Application Architecture & Shell
+## 1. React 19 Application Architecture & Shell (
+AI Overview
+
+React 19 is a major version of the React JavaScript library)
 
 The application is structured using **React 19** with functional components and modern hook-driven state machines.
 
