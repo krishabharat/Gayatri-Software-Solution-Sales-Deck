@@ -1,5 +1,7 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import EmptyState from '../components/EmptyState/EmptyState'
 import { formatCurrency, type SaleRecord } from '../utils/storage'
 import { deleteCloudSale, describeCloudError, getCloudSalesRecords, migrateLegacySaleIds } from '../utils/cloudStorage'
@@ -13,6 +15,7 @@ export default function Sales() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isMigratingIds, setIsMigratingIds] = useState(false)
+  const [downloadingSaleId, setDownloadingSaleId] = useState('')
   const [searchParams] = useSearchParams()
   const search = (searchParams.get('search') || '').trim().toLowerCase()
 
@@ -36,6 +39,175 @@ export default function Sales() {
   const openInvoice = (sale: SaleRecord) => setSelectedSale(sale)
 
   const closeInvoice = () => setSelectedSale(null)
+
+  const downloadInvoice = async (sale: SaleRecord) => {
+    if (downloadingSaleId) return
+    setDownloadingSaleId(sale.id)
+    setError('')
+    try {
+      const logoResponse = await fetch('/brand-mark.png')
+      if (!logoResponse.ok) throw new Error('Unable to load the company logo for the invoice.')
+      const logoBytes = new Uint8Array(await logoResponse.arrayBuffer())
+      const logoData = btoa(Array.from(logoBytes, (byte) => String.fromCharCode(byte)).join(''))
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const left = 15
+      const right = pageWidth - 15
+      const ink: [number, number, number] = [27, 43, 41]
+      const teal: [number, number, number] = [18, 83, 73]
+      const muted: [number, number, number] = [103, 116, 113]
+      const pale: [number, number, number] = [240, 247, 244]
+      const money = (amount: number) => `INR ${formatCurrency(amount).replace(/^₹/, '')}`
+
+      doc.setFillColor(...teal)
+      doc.rect(0, 0, pageWidth, 3, 'F')
+      doc.addImage(`data:image/png;base64,${logoData}`, 'PNG', left, 12, 19, 19, undefined, 'FAST')
+      doc.setDrawColor(215, 228, 223)
+      doc.setLineWidth(0.45)
+      doc.line(left + 24, 13, left + 24, 30)
+      doc.setTextColor(...ink)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(15.5)
+      doc.text('SAI GAYATRI INDUSTRIES', left + 30, 20)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(...muted)
+      doc.text('SALES INVOICE', left + 30, 26)
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(21)
+      doc.setTextColor(...teal)
+      doc.text('INVOICE', right, 17, { align: 'right' })
+      doc.setFontSize(9)
+      doc.setTextColor(...ink)
+      doc.text(sale.id, right, 23, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...muted)
+      doc.text(`Invoice date  ${sale.saleDate || '—'}`, right, 29, { align: 'right' })
+
+      doc.setDrawColor(215, 228, 223)
+      doc.setLineWidth(0.45)
+      doc.line(left, 36, right, 36)
+      doc.setFillColor(...pale)
+      doc.roundedRect(left, 42, right - left, 29, 3, 3, 'F')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(...teal)
+      doc.text('BILL TO', left + 5, 49)
+      doc.setTextColor(...ink)
+      doc.setFontSize(12)
+      doc.text(sale.customerName || 'Customer', left + 5, 56)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(...muted)
+      doc.text(`Mobile: ${sale.mobile || '—'}`, left + 5, 63)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(...teal)
+      doc.text('PAYMENT STATUS', right - 52, 49)
+      doc.setFontSize(10)
+      doc.setTextColor(...ink)
+      doc.text(sale.paymentStatus.toUpperCase(), right - 52, 56)
+
+      let tableEndY = 76
+      autoTable(doc, {
+        startY: 77,
+        margin: { left, right: 15, top: 19, bottom: 20 },
+        head: [['#', 'PRODUCT DESCRIPTION', 'QTY', 'UNIT PRICE', 'AMOUNT']],
+        body: sale.products.map((product, index) => [
+          String(index + 1),
+          product.name || 'Product',
+          Number(product.quantity).toLocaleString('en-IN'),
+          money(product.selling),
+          money(product.quantity * product.selling)
+        ]),
+        theme: 'grid',
+        pageBreak: 'auto',
+        rowPageBreak: 'avoid',
+        showHead: 'everyPage',
+        styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 3, textColor: ink, lineColor: [225, 234, 230], lineWidth: 0.2, valign: 'middle' },
+        headStyles: { fillColor: teal, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5, cellPadding: 3.2 },
+        alternateRowStyles: { fillColor: [248, 251, 249] },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 20, halign: 'right' },
+          3: { cellWidth: 34, halign: 'right' },
+          4: { cellWidth: 37, halign: 'right', fontStyle: 'bold' }
+        },
+        didDrawPage: (data) => {
+          tableEndY = data.cursor?.y || tableEndY
+          if (data.pageNumber > 1) {
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(8)
+            doc.setTextColor(...muted)
+            doc.text(`SAI GAYATRI INDUSTRIES  ·  INVOICE ${sale.id}`, left, 12)
+          }
+        }
+      })
+
+      const totalsHeight = 55
+      let totalsY = Math.max(tableEndY + 8, 88)
+      if (totalsY + totalsHeight > pageHeight - 26) {
+        doc.addPage()
+        totalsY = 25
+      }
+      const boxX = right - 76
+      doc.setFillColor(...pale)
+      doc.roundedRect(boxX, totalsY, 76, totalsHeight, 3, 3, 'F')
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(...muted)
+      doc.text('Subtotal', boxX + 5, totalsY + 10)
+      doc.text(money(sale.subtotal), right - 5, totalsY + 10, { align: 'right' })
+      if (sale.discount > 0) {
+        doc.text('Discount', boxX + 5, totalsY + 18)
+        doc.text(`- ${money(sale.discount)}`, right - 5, totalsY + 18, { align: 'right' })
+      }
+      const totalLineY = totalsY + (sale.discount > 0 ? 27 : 21)
+      doc.setDrawColor(205, 220, 214)
+      doc.line(boxX + 5, totalLineY - 4, right - 5, totalLineY - 4)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(...teal)
+      doc.text('GRAND TOTAL', boxX + 5, totalLineY + 2)
+      doc.text(money(sale.grandTotal), right - 5, totalLineY + 2, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(...muted)
+      doc.text(`Amount paid  ${money(sale.amountPaid || 0)}`, boxX + 5, totalsY + 41)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...ink)
+      doc.text(`Balance due  ${money(sale.remaining || 0)}`, boxX + 5, totalsY + 49)
+
+      const thankYouY = totalsY + totalsHeight + 12
+      if (thankYouY + 12 > pageHeight - 22) doc.addPage()
+      const footerY = doc.internal.pageSize.getHeight() - 14
+      doc.setDrawColor(215, 228, 223)
+      doc.line(left, footerY - 5, right, footerY - 5)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(...muted)
+      doc.text('Thank you for your business.', left, footerY)
+      doc.text('Computer-generated invoice', right, footerY, { align: 'right' })
+
+      const pageCount = doc.getNumberOfPages()
+      for (let page = 1; page <= pageCount; page += 1) {
+        doc.setPage(page)
+        const pageFooterY = doc.internal.pageSize.getHeight() - 6
+        doc.setFontSize(7)
+        doc.setTextColor(...muted)
+        doc.text(`Page ${page} of ${pageCount}`, right, pageFooterY, { align: 'right' })
+      }
+      const safeId = sale.id.replace(/[^a-zA-Z0-9_-]/g, '-')
+      doc.save(`Sai-Gayatri-Invoice-${safeId}.pdf`)
+    } catch (downloadError) {
+      setError(describeCloudError(downloadError, 'Unable to generate the invoice PDF. Please try again.'))
+    } finally {
+      setDownloadingSaleId('')
+    }
+  }
 
   const handleEdit = (saleId: string) => {
     navigate(`/sales/new?id=${saleId}`)
@@ -152,7 +324,9 @@ export default function Sales() {
                         <button className="muted-btn" type="button" onClick={() => openInvoice(sale)}>View</button>
                         <button className="muted-btn" type="button" onClick={() => handleEdit(sale.id)}>Edit</button>
                         <button className="muted-btn" type="button" onClick={() => handleDelete(sale.id)}>Delete</button>
-                        <button className="muted-btn" type="button" onClick={() => openInvoice(sale)}>Print Invoice</button>
+                        <button className="muted-btn" type="button" onClick={() => void downloadInvoice(sale)} disabled={Boolean(downloadingSaleId)}>
+                          {downloadingSaleId === sale.id ? 'Creating PDF...' : 'Download Invoice'}
+                        </button>
                       </div>
                     </td>
                       </>
@@ -167,14 +341,14 @@ export default function Sales() {
 
       {selectedSale && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 sm:p-6">
-          <div className="invoice-print-area max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[26px] border border-[#dce8e3] bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.2)] sm:p-8">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[26px] border border-[#dce8e3] bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.2)] sm:p-8">
             <div className="flex flex-col gap-5 border-b-2 border-[#dce8e3] pb-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-3">
-                  <img src="/brand-mark.svg" alt="" className="invoice-brand-mark rounded-2xl" />
+                  <img src="/brand-mark.png" alt="" className="invoice-brand-mark object-contain" />
                   <div>
                     <div className="text-xl font-extrabold tracking-[-0.04em] text-[#123f3a] sm:text-2xl">SAI GAYATRI</div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#9a7840]">Industries</div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Industries</div>
                   </div>
                 </div>
                 <div className="mt-4 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Tax Invoice / Sales Invoice</div>
@@ -210,7 +384,7 @@ export default function Sales() {
               const sellingPerPlate = selectedSale.totalPlates > 0 ? sellingTotal / selectedSale.totalPlates : 0
               return (
                 <div className="sales-internal-summary mt-5 rounded-2xl border border-[#f1dfb7] bg-[#fffaf0] p-4">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a641d]">Internal costing · Not shown on printed invoice</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a641d]">Internal costing · Not included in customer invoice</div>
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div><div className="text-xs text-slate-500">Making / plate</div><div className="mt-1 font-semibold">{formatCurrency(costPerPlate)}</div></div>
                     <div><div className="text-xs text-slate-500">Selling / plate</div><div className="mt-1 font-semibold">{formatCurrency(sellingPerPlate)}</div></div>
@@ -258,9 +432,11 @@ export default function Sales() {
               <div className="mt-5 w-40 border-t border-slate-400 pt-2 text-center text-xs text-slate-500 sm:mt-0">Authorized Signature</div>
             </div>
 
-            <div className="invoice-modal-actions mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button type="button" className="secondary-btn" onClick={closeInvoice}>Close</button>
-              <button type="button" className="primary-btn" onClick={() => window.print()}>Print Invoice</button>
+              <button type="button" className="primary-btn" onClick={() => void downloadInvoice(selectedSale)} disabled={Boolean(downloadingSaleId)}>
+                {downloadingSaleId === selectedSale.id ? 'Creating PDF...' : 'Download PDF Invoice'}
+              </button>
             </div>
           </div>
         </div>

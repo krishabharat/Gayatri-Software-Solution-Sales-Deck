@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatCurrency, type BusinessExpense, type InventoryItem, type SaleRecord } from '../utils/storage'
-import { describeCloudError, getCloudBusinessExpenses, getCloudCustomers, getCloudInventoryItems, getCloudOrderQueries, getCloudProductMasterItems, getCloudSalesRecords, getCloudSuppliers } from '../utils/cloudStorage'
+import {
+  describeCloudError,
+  getCloudBusinessExpenses,
+  getCloudCustomers,
+  getCloudInventoryItems,
+  getCloudOrderQueries,
+  getCloudProductMasterItems,
+  getCloudSalesRecords,
+  getCloudStockSalesRecords,
+  getCloudSuppliers
+} from '../utils/cloudStorage'
 import { downloadBusinessJsonBackup, downloadBusinessWorkbook, type BusinessExportData } from '../utils/businessExport'
+import { getInventoryProducts } from '../utils/inventoryPricing'
+import MonthlyReport from '../components/Reports/MonthlyReport'
 
 const filters = ['Today', 'This Week', 'This Month', 'Last Month', 'Custom Range']
 
@@ -9,9 +21,15 @@ export default function Reports() {
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [expenses, setExpenses] = useState<BusinessExpense[]>([])
+  const [productMasters, setProductMasters] = useState<Awaited<ReturnType<typeof getCloudProductMasterItems>>>([])
+  const [stockTrackedSales, setStockTrackedSales] = useState<SaleRecord[]>([])
   const [loadError, setLoadError] = useState('')
+  const [isReportLoading, setIsReportLoading] = useState(true)
   const [exportError, setExportError] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [selectedFilter, setSelectedFilter] = useState('This Month')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
 
   const exportAllData = async (format: 'excel' | 'json') => {
     if (exporting) return
@@ -46,19 +64,25 @@ export default function Reports() {
   }
 
   useEffect(() => {
-    Promise.all([getCloudSalesRecords(), getCloudInventoryItems(), getCloudBusinessExpenses()])
-      .then(([loadedSales, loadedInventory, loadedExpenses]) => {
+    Promise.all([
+      getCloudSalesRecords(),
+      getCloudInventoryItems(),
+      getCloudBusinessExpenses(),
+      getCloudProductMasterItems(),
+      getCloudStockSalesRecords()
+    ])
+      .then(([loadedSales, loadedInventory, loadedExpenses, loadedProducts, loadedStockTrackedSales]) => {
         setSales(loadedSales)
         setInventory(loadedInventory)
         setExpenses(loadedExpenses)
+        setProductMasters(loadedProducts)
+        setStockTrackedSales(loadedStockTrackedSales)
       })
       .catch((error) => setLoadError(describeCloudError(error, 'Unable to load cloud report data.')))
+      .finally(() => setIsReportLoading(false))
   }, [])
-  const hasData = sales.length > 0 || inventory.length > 0
-  const [selectedFilter, setSelectedFilter] = useState('This Month')
-  const [customStart, setCustomStart] = useState('')
-  const [customEnd, setCustomEnd] = useState('')
 
+  const hasData = sales.length > 0 || inventory.length > 0
   const filteredData = useMemo(() => {
     const now = new Date()
     const today = now.toISOString().slice(0, 10)
@@ -90,7 +114,6 @@ export default function Reports() {
   const filteredInventory = filteredData.inventory
   const filteredExpenses = filteredData.expenses
   const filteredHasData = filteredSales.length > 0 || filteredInventory.length > 0 || filteredExpenses.length > 0
-
   const salesMetrics = {
     totalSales: filteredSales.reduce((sum, sale) => sum + sale.grandTotal, 0),
     totalPlates: filteredSales.reduce((sum, sale) => sum + sale.totalPlates, 0),
@@ -98,7 +121,6 @@ export default function Reports() {
     unpaid: filteredSales.filter((sale) => sale.paymentStatus !== 'Paid').reduce((sum, sale) => sum + sale.remaining, 0),
     customers: new Set(filteredSales.map((sale) => sale.customerName)).size
   }
-
   const inventoryMetrics = {
     totalStock: filteredInventory.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
     inventoryValue: filteredInventory.reduce((sum, item) => sum + Number(item.totalCost || 0), 0),
@@ -106,17 +128,22 @@ export default function Reports() {
     transportCost: filteredInventory.reduce((sum, item) => sum + Number(item.transportCost || 0), 0),
     lowStock: filteredInventory.filter((item) => Number(item.quantity || 0) <= 0).length
   }
-
+  const productCost = filteredSales.reduce(
+    (sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0),
+    0
+  )
+  const expenseTotal = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
   const profitMetrics = {
     revenue: salesMetrics.totalSales,
-    productCost: filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0), 0),
+    productCost,
     transportCost: 0,
-    expenses: filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0),
-    estimatedProfit: salesMetrics.totalSales -
-      filteredSales.reduce((sum, sale) => sum + sale.products.reduce((itemSum, product) => itemSum + product.quantity * product.purchaseCost, 0), 0) -
-      filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+    expenses: expenseTotal,
+    estimatedProfit: salesMetrics.totalSales - productCost - expenseTotal
   }
-
+  const currentStock = useMemo(
+    () => getInventoryProducts(inventory, productMasters, sales, stockTrackedSales),
+    [inventory, productMasters, sales, stockTrackedSales]
+  )
   const renderMetric = (label: string, value: string) => (
     <div key={label} className="rounded-2xl border border-[#ebf3f1] bg-[#fafefc] p-3">
       <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">{label}</div>
@@ -146,6 +173,14 @@ export default function Reports() {
         </div>
       </section>
       <p className="-mt-4 px-2 text-xs text-slate-500">Keep exported files in a private, secure location. They contain customer contact details and internal costing information.</p>
+
+      <MonthlyReport
+        sales={sales}
+        inventory={inventory}
+        expenses={expenses}
+        currentStock={currentStock}
+        isLoading={isReportLoading}
+      />
 
       <div className="app-surface p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">

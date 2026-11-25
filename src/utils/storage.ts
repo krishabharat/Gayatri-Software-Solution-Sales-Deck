@@ -11,6 +11,8 @@ export type InventoryItem = {
   type: string
   materialCost: number
   totalCost: number
+  notes?: string
+  intakeBatchId?: string
   createdAt?: string
 }
 
@@ -26,6 +28,7 @@ export type ProductMasterItem = {
   defaultCost: number
   defaultSellingPrice: number
   minimumStockLevel: number
+  image?: string
   createdAt: string
 }
 
@@ -70,7 +73,7 @@ export type OrderQuery = {
   withoutCover: number
   orderDate: string
   deliveryDate: string
-  stage: 'Order' | 'To Pickup' | 'To Deliver' | 'Delivered'
+  stage: 'Order' | 'To Pickup' | 'To Deliver' | 'Delivered' | 'Cancelled'
   paymentMethod: 'Online' | 'Cash'
   advancePayment: number
   products: OrderQueryProduct[]

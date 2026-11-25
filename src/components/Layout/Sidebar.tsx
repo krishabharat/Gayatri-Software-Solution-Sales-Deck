@@ -2,9 +2,10 @@ import { NavLink } from 'react-router-dom'
 
 const navItems = [
   { to: '/home', label: 'HOME', icon: 'home' },
+  { to: '/ai-chat', label: 'AI CHAT', icon: 'aichat', badge: 'GEMINI' },
   { to: '/sales', label: 'SALES', icon: 'sales' },
   { to: '/inventory', label: 'INVENTORY', icon: 'inventory' },
-  { to: '/orders', label: 'QUERIES', icon: 'orders' },
+  { to: '/orders', label: 'CUSTOMER QUERIES', icon: 'orders' },
   { to: '/expenses', label: 'EXPENSES', icon: 'expenses' },
   { to: '/customers', label: 'CUSTOMERS', icon: 'customers' },
   { to: '/suppliers', label: 'SUPPLIERS', icon: 'suppliers' },
@@ -13,62 +14,77 @@ const navItems = [
 
 const iconMap: Record<string, React.ReactNode> = {
   home: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-7H9v7H5a1 1 0 0 1-1-1v-8.5Z" /></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-7H9v7H5a1 1 0 0 1-1-1v-8.5Z" /></svg>
   ),
-  customers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><circle cx="9" cy="8" r="3" /><path d="M3 19a6 6 0 0 1 12 0M16 11a3 3 0 0 1 5 2.2M17 19h4" /></svg>,
-  suppliers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 8h16v12H4zM7 8V5h10v3M8 12h8M8 16h5" /></svg>,
+  aichat: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M12 3c-4.97 0-9 3.58-9 8 0 2.2 1 4.19 2.62 5.61L5 21l4.78-1.59c.7.19 1.44.29 2.22.29 4.97 0 9-3.58 9-8s-4.03-8-9-8z" /><circle cx="8.5" cy="11.5" r="1" fill="currentColor" /><circle cx="12" cy="11.5" r="1" fill="currentColor" /><circle cx="15.5" cy="11.5" r="1" fill="currentColor" /></svg>
+  ),
+  customers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><circle cx="9" cy="8" r="3" /><path d="M3 19a6 6 0 0 1 12 0M16 11a3 3 0 0 1 5 2.2M17 19h4" /></svg>,
+  suppliers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M4 8h16v12H4zM7 8V5h10v3M8 12h8M8 16h5" /></svg>,
   sales: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M6 7.5h12M6 12h12M6 16.5h8" /><path d="M18 16.5h.01" /></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M6 7.5h12M6 12h12M6 16.5h8" /><path d="M18 16.5h.01" /></svg>
   ),
   inventory: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 8.5 12 4l8 4.5-8 4.5-8-4.5Zm0 3 8 4.5 8-4.5M4 15l8 4.5 8-4.5" /></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M4 8.5 12 4l8 4.5-8 4.5-8-4.5Zm0 3 8 4.5 8-4.5M4 15l8 4.5 8-4.5" /></svg>
   ),
   reports: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M5 19V9m7 10V5m7 14v-8" /></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M5 19V9m7 10V5m7 14v-8" /></svg>
   ),
   orders: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M6 5h12v14H6z" /><path d="M9 9h6M9 13h6M9 17h4" /></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M6 5h12v14H6z" /><path d="M9 9h6M9 13h6M9 17h4" /></svg>
   ),
   expenses: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 7h16v12H4z" /><path d="M8 7V5h8v2M8 12h8M12 10v4" /></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M4 7h16v12H4z" /><path d="M8 7V5h8v2M8 12h8M12 10v4" /></svg>
   )
 }
 
 export default function Sidebar() {
   return (
-    <aside className="hidden w-[260px] flex-col border-r border-[#dce8e3] bg-[#f7faf8]/95 px-5 py-6 backdrop-blur md:flex">
-      <div className="mb-8 ml-1 flex items-center gap-3">
-        <img src="/brand-mark.svg" alt="Sai Gayatri Industries logo" className="h-12 w-12 rounded-2xl shadow-md" />
+    <aside className="hidden w-[262px] flex-col rounded-[26px] border border-[#E6D7C3] bg-[#FFFDF9] px-4 py-6 text-[#3B2314] shadow-[0_12px_36px_-10px_rgba(59,35,20,0.08)] md:mr-3 md:flex">
+      {/* Bright Cream Header so Logo & Text are 100% Crisp and Visible */}
+      <div className="mb-8 flex items-center gap-3 rounded-2xl border border-[#EFE3D2] bg-[#FAF5EE] p-3">
+        <img src="/brand-mark.png" alt="Sai Gayatri logo" className="h-11 w-11 object-contain" />
         <div>
-          <div className="text-[11px] font-bold tracking-[0.17em] text-[#174d45]">SAI GAYATRI</div>
-          <div className="text-[10px] font-semibold tracking-[0.22em] text-[#9a7840]">INDUSTRIES</div>
+          <div className="text-xs font-extrabold tracking-[0.14em] text-[#2B1810]">SAI GAYATRI</div>
+          <div className="text-[10px] font-bold tracking-[0.2em] text-[#B46528]">INDUSTRIES</div>
         </div>
       </div>
 
-      <nav className="space-y-2">
+      <nav className="space-y-1.5">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-150 tracking-wide ${
                 isActive
-                  ? 'bg-[#e5f2ed] text-[#174d45] shadow-sm'
-                  : 'text-slate-600 hover:bg-[#edf5f1] hover:text-slate-800'
+                  ? 'bg-gradient-to-r from-[#5C3317] to-[#B46528] text-white shadow-md shadow-[#5C3317]/20'
+                  : 'text-[#5C3317] hover:bg-[#FAF5EE] hover:text-[#2B1810]'
               }`
             }
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#174d45] shadow-sm">
-              {iconMap[item.icon]}
-            </span>
-            <span>{item.label}</span>
+            <div className="flex items-center gap-3">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg">
+                {iconMap[item.icon]}
+              </span>
+              <span>{item.label}</span>
+            </div>
+            {item.badge && (
+              <span className="rounded-md bg-[#F3E6D5] px-1.5 py-0.5 text-[9px] font-extrabold text-[#8C4A1F] border border-[#D9C3A8]">
+                {item.badge}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
 
-      <div className="mt-auto rounded-2xl border border-[#dce8e3] bg-[#edf5f1] p-4">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#55736b]">Operations</div>
-        <div className="mt-2 text-sm font-semibold text-[#174d45]">Industrial service control</div>
+      <div className="mt-auto rounded-2xl border border-[#E6D7C3] bg-[#FAF5EE] p-4">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[#8C4A1F]">Gemini + Supabase</div>
+        </div>
+        <div className="mt-1 text-xs font-bold text-[#2B1810]">Live AI Brain Active</div>
+        <p className="mt-0.5 text-[11px] font-medium text-[#7A5C48]">Real-time SQL & RAG sync</p>
       </div>
     </aside>
   )

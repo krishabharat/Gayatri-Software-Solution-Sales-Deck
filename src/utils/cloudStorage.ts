@@ -1,5 +1,54 @@
 import { supabase } from './supabase'
 import type { BusinessExpense, Customer, InventoryItem, OrderQuery, ProductMasterItem, SaleProduct, SaleRecord, Supplier } from './storage'
+import {
+  deleteCustomerFromAI,
+  deleteExpenseFromAI,
+  deleteOrderFromAI,
+  deleteSaleFromAI,
+  deleteSupplierFromAI,
+  markSalePaidInAI,
+  syncCustomerToAI,
+  syncExpenseToAI,
+  syncInventoryToAI,
+  syncOrderToAI,
+  syncProductToAI,
+  syncSaleToAI,
+  syncSupplierToAI
+} from './aiSync'
+
+function createReadCache<T>(load: () => Promise<T>) {
+  let value: T | undefined
+  let expiresAt = 0
+  let generation = 0
+  let pending: Promise<T> | null = null
+
+  return {
+    get() {
+      if (value !== undefined && Date.now() < expiresAt) return Promise.resolve(value)
+      if (pending) return pending
+
+      const requestGeneration = generation
+      pending = load()
+        .then((result) => {
+          if (generation === requestGeneration) {
+            value = result
+            expiresAt = Date.now() + 15_000
+          }
+          return result
+        })
+        .finally(() => {
+          if (generation === requestGeneration) pending = null
+        })
+      return pending
+    },
+    invalidate() {
+      generation += 1
+      value = undefined
+      expiresAt = 0
+      pending = null
+    }
+  }
+}
 
 export function describeCloudError(error: unknown, fallback: string) {
   if (error && typeof error === 'object') {
@@ -14,7 +63,7 @@ export function describeCloudError(error: unknown, fallback: string) {
       return `${fallback} A linked database record is missing. Check that the sales and sale_products tables were created from the latest schema.`
     }
     if (details.code === '23505') {
-      return `${fallback} This sale ID already exists. Please refresh the form and try again.`
+      return `${fallback} A product ID/name or intake record already exists. Check for a duplicate and try again.`
     }
     if (details.code === 'PGRST204' || details.message?.toLowerCase().includes('schema cache')) {
       return `${fallback} Supabase is missing a required column. Run the latest migration SQL in supabase/schema.sql, then run notify pgrst, 'reload schema'; and wait 30 seconds before retrying.`
@@ -38,20 +87,26 @@ function requireSupabase() {
   return supabase
 }
 
-function toInventoryItem(row: Record<string, unknown>): InventoryItem {
+function toInventoryItem(row: Record<string, unknown>, product?: ProductMasterItem): InventoryItem {
+  const quantity = Number(row.quantity || 0)
+  const costPerSheet = Number(row.cost_price || 0)
+  const transportCost = Number(row.transport_cost || 0)
+  const materialCost = quantity * costPerSheet
   return {
     id: String(row.id),
     date: String(row.date),
-    productId: String(row.product_id || ''),
-    productName: String(row.product_name || ''),
-    supplierName: String(row.supplier_name || ''),
-    quantity: Number(row.quantity || 0),
-    costPerSheet: Number(row.cost_per_sheet || 0),
-    sellingCost: Number(row.selling_cost || 0),
-    transportCost: Number(row.transport_cost || 0),
+    productId: product?.productId || '',
+    productName: product?.productName || '',
+    supplierName: String(row.supplier || ''),
+    quantity,
+    costPerSheet,
+    sellingCost: Number(row.selling_price_at_time || 0),
+    transportCost,
     type: String(row.type || 'Purchased'),
-    materialCost: Number(row.material_cost || 0),
-    totalCost: Number(row.total_cost || 0),
+    materialCost,
+    totalCost: materialCost + transportCost,
+    notes: String(row.notes || ''),
+    intakeBatchId: String(row.intake_batch_id || ''),
     createdAt: row.created_at ? String(row.created_at) : undefined
   }
 }
@@ -66,6 +121,7 @@ function toProductMasterItem(row: Record<string, unknown>): ProductMasterItem {
     defaultCost: Number(row.default_cost || 0),
     defaultSellingPrice: Number(row.default_selling_price || 0),
     minimumStockLevel: Number(row.minimum_stock_level || 0),
+    image: row.image ? String(row.image) : undefined,
     createdAt: String(row.created_at || new Date().toISOString())
   }
 }
@@ -88,80 +144,163 @@ function toSaleRecord(row: Record<string, unknown>, products: SaleProduct[]): Sa
   }
 }
 
-export async function getCloudInventoryItems() {
+async function loadCloudInventoryItems() {
   const client = requireSupabase()
-  const { data, error } = await client.from('inventory').select('*').order('created_at', { ascending: false })
+  const [{ data, error }, products] = await Promise.all([
+    client.from('stock_intakes').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
+    getCloudProductMasterItems()
+  ])
   if (error) throw error
-  return (data || []).map((row) => toInventoryItem(row))
-}
-
-export async function saveCloudInventoryItem(item: InventoryItem) {
-  const client = requireSupabase()
-  const { error } = await client.from('inventory').upsert({
-    id: item.id,
-    date: item.date,
-    product_id: item.productId,
-    product_name: item.productName,
-    supplier_name: item.supplierName || '',
-    quantity: item.quantity,
-    cost_per_sheet: item.costPerSheet,
-    selling_cost: item.sellingCost,
-    transport_cost: item.transportCost,
-    type: item.type,
-    material_cost: item.materialCost,
-    total_cost: item.totalCost,
-    created_at: item.createdAt
+  const productsById = new Map(products.map((product) => [product.id, product]))
+  return (data || []).map((row) => {
+    const product = productsById.get(String(row.product_id))
+    if (!product) throw new Error(`Stock intake "${String(row.id)}" refers to a product that is missing from Product Master.`)
+    return toInventoryItem(row, product)
   })
-  if (error) throw error
 }
 
-export async function deleteCloudInventoryItem(id: string) {
+const inventoryCache = createReadCache(loadCloudInventoryItems)
+
+export function getCloudInventoryItems() {
+  return inventoryCache.get()
+}
+
+export async function saveCloudStockIntakes(items: InventoryItem[]) {
+  if (items.length === 0) return
+  const batchIds = new Set(items.map((item) => item.intakeBatchId).filter(Boolean))
+  if (batchIds.size > 1) throw new Error('All rows in a stock-intake submission must belong to the same batch.')
+  if (items.some((item) => item.date !== items[0].date || item.supplierName !== items[0].supplierName)) {
+    throw new Error('All rows in a stock-intake submission must share one date and supplier.')
+  }
+  const intakeBatchId = items[0].intakeBatchId || `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
   const client = requireSupabase()
-  const { error } = await client.from('inventory').delete().eq('id', id)
+  const products = await getCloudProductMasterItems()
+  const productsBySku = new Map(products.map((product) => [product.productId.trim().toLocaleLowerCase(), product]))
+  const intakeRows = items.map((item) => {
+    const product = productsBySku.get(item.productId.trim().toLocaleLowerCase())
+    if (!product) throw new Error(`Product "${item.productId}" was not found. Save the product before receiving stock.`)
+    if (!Number.isFinite(item.quantity) || item.quantity <= 0) throw new Error('Stock intake quantity must be greater than zero.')
+    if (!Number.isFinite(item.costPerSheet) || item.costPerSheet < 0) throw new Error('Stock intake cost must be zero or greater.')
+    if (!Number.isFinite(item.transportCost) || item.transportCost < 0 || !Number.isFinite(item.sellingCost) || item.sellingCost < 0) {
+      throw new Error('Stock intake selling and transport prices must be zero or greater.')
+    }
+    return {
+      id: item.id,
+      product_id: product.id,
+      date: item.date,
+      quantity: item.quantity,
+      cost_price: item.costPerSheet,
+      supplier: item.supplierName || '',
+      selling_price_at_time: item.sellingCost || null,
+      transport_cost: item.transportCost || 0,
+      type: item.type || 'Purchased',
+      notes: item.notes || '',
+      intake_batch_id: intakeBatchId,
+      created_at: item.createdAt
+    }
+  })
+  const { error } = await client.from('stock_intakes').insert(intakeRows)
   if (error) throw error
+  inventoryCache.invalidate()
+  void syncInventoryToAI(items)
 }
 
-export async function getCloudCustomers(): Promise<Customer[]> {
+export async function updateCloudStockIntake(item: InventoryItem) {
+  if (!item.date) throw new Error('Stock receipt date is required.')
+  if (!Number.isFinite(item.quantity) || item.quantity <= 0) throw new Error('Stock intake quantity must be greater than zero.')
+  if (!Number.isFinite(item.costPerSheet) || item.costPerSheet < 0) throw new Error('Stock intake cost must be zero or greater.')
+  if (!Number.isFinite(item.transportCost) || item.transportCost < 0 ||
+    !Number.isFinite(item.sellingCost) || item.sellingCost < 0) {
+    throw new Error('Stock intake selling and transport prices must be zero or greater.')
+  }
+
+  const client = requireSupabase()
+  const products = await getCloudProductMasterItems()
+  const product = products.find((entry) => entry.productId.trim().toLocaleLowerCase() === item.productId.trim().toLocaleLowerCase())
+  if (!product) throw new Error(`Product "${item.productId}" was not found. Save the product before editing its stock receipt.`)
+  const { data, error } = await client.from('stock_intakes').update({
+    product_id: product.id,
+    date: item.date,
+    quantity: item.quantity,
+    cost_price: item.costPerSheet,
+    supplier: item.supplierName || '',
+    selling_price_at_time: item.sellingCost || null,
+    transport_cost: item.transportCost || 0,
+    type: item.type || 'Purchased',
+    notes: item.notes || ''
+  }).eq('id', item.id).select('id').maybeSingle()
+  if (error) {
+    if (error.message.toLocaleLowerCase().includes('append-only')) {
+      throw new Error('Stock receipt editing is not enabled in Supabase yet. Apply supabase/migrations/20261018_audited_inventory_edits.sql, then retry.')
+    }
+    throw error
+  }
+  if (!data) throw new Error(`Stock receipt "${item.id}" was not found and could not be updated.`)
+  inventoryCache.invalidate()
+  void syncInventoryToAI([item])
+}
+
+async function loadCloudCustomers(): Promise<Customer[]> {
   const client = requireSupabase()
   const { data, error } = await client.from('customers').select('*').order('name')
   if (error) throw error
   return (data || []).map((row) => ({ id: String(row.id), name: String(row.name || ''), mobile: String(row.mobile || ''), createdAt: String(row.created_at || '') }))
 }
 
+const customerCache = createReadCache(loadCloudCustomers)
+
+export function getCloudCustomers() {
+  return customerCache.get()
+}
+
 export async function saveCloudCustomer(customer: Customer) {
   const client = requireSupabase()
   const { error } = await client.from('customers').upsert({ id: customer.id, name: customer.name, mobile: customer.mobile, created_at: customer.createdAt })
   if (error) throw error
+  customerCache.invalidate()
+  void syncCustomerToAI(customer)
 }
 
 export async function deleteCloudCustomer(id: string) {
   const client = requireSupabase()
   const { error } = await client.from('customers').delete().eq('id', id)
   if (error) throw error
+  customerCache.invalidate()
+  void deleteCustomerFromAI(id)
 }
 
-export async function getCloudSuppliers(): Promise<Supplier[]> {
+async function loadCloudSuppliers(): Promise<Supplier[]> {
   const client = requireSupabase()
   const { data, error } = await client.from('suppliers').select('*').order('name')
   if (error) throw error
   return (data || []).map((row) => ({ id: String(row.id), name: String(row.name || ''), mobile: String(row.mobile || ''), createdAt: String(row.created_at || '') }))
 }
 
+const supplierCache = createReadCache(loadCloudSuppliers)
+
+export function getCloudSuppliers() {
+  return supplierCache.get()
+}
+
 export async function saveCloudSupplier(supplier: Supplier) {
   const client = requireSupabase()
   const { error } = await client.from('suppliers').upsert({ id: supplier.id, name: supplier.name, mobile: supplier.mobile || '', created_at: supplier.createdAt })
   if (error) throw error
+  supplierCache.invalidate()
+  void syncSupplierToAI(supplier)
 }
 
 export async function deleteCloudSupplier(id: string) {
   const client = requireSupabase()
   const { error } = await client.from('suppliers').delete().eq('id', id)
   if (error) throw error
+  supplierCache.invalidate()
+  void deleteSupplierFromAI(id)
 }
 
 export async function saveCloudProductMasterItem(item: ProductMasterItem) {
   const client = requireSupabase()
-  const { error } = await client.from('products').upsert({
+  const { error } = await client.from('products').insert({
     id: item.id,
     product_id: item.productId,
     product_name: item.productName,
@@ -170,19 +309,47 @@ export async function saveCloudProductMasterItem(item: ProductMasterItem) {
     default_cost: item.defaultCost,
     default_selling_price: item.defaultSellingPrice,
     minimum_stock_level: item.minimumStockLevel,
+    image: item.image || null,
     created_at: item.createdAt
   })
   if (error) throw error
+  productCache.invalidate()
+  void syncProductToAI(item)
 }
 
-export async function getCloudProductMasterItems() {
+export async function updateCloudProductMasterItem(item: ProductMasterItem) {
+  const client = requireSupabase()
+  const { data, error } = await client.from('products').update({
+    product_id: item.productId,
+    product_name: item.productName,
+    category: item.category,
+    unit: item.unit,
+    default_cost: item.defaultCost,
+    default_selling_price: item.defaultSellingPrice,
+    minimum_stock_level: item.minimumStockLevel,
+    image: item.image || null
+  }).eq('id', item.id).select('id').maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error(`Product "${item.productId}" was not found and could not be updated.`)
+  productCache.invalidate()
+  inventoryCache.invalidate()
+  void syncProductToAI(item)
+}
+
+async function loadCloudProductMasterItems() {
   const client = requireSupabase()
   const { data, error } = await client.from('products').select('*').order('created_at', { ascending: false })
   if (error) throw error
   return (data || []).map((row) => toProductMasterItem(row))
 }
 
-export async function getCloudSalesRecords(): Promise<SaleRecord[]> {
+const productCache = createReadCache(loadCloudProductMasterItems)
+
+export function getCloudProductMasterItems() {
+  return productCache.get()
+}
+
+async function loadCloudSalesRecords(): Promise<SaleRecord[]> {
   const client = requireSupabase()
   const [{ data: sales, error: salesError }, { data: products, error: productsError }] = await Promise.all([
     client
@@ -213,6 +380,35 @@ export async function getCloudSalesRecords(): Promise<SaleRecord[]> {
     sale,
     productsBySale.get(sale.id) || []
   ))
+}
+
+const salesCache = createReadCache(loadCloudSalesRecords)
+
+export function getCloudSalesRecords() {
+  return salesCache.get()
+}
+
+async function loadCloudStockSalesRecords() {
+  const client = requireSupabase()
+  const [{ data, error }, sales] = await Promise.all([
+    client.from('stock_intake_settings').select('value').eq('key', 'sales_stock_tracking_started_at').single(),
+    getCloudSalesRecords()
+  ])
+  if (error) throw error
+  const trackingStartedAt = Date.parse(String(data.value))
+  if (!Number.isFinite(trackingStartedAt)) throw new Error('Stock tracking start date is invalid in Supabase.')
+  // Legacy inventory quantities already reflect old sales; deduct sales only from the migration cutover onward.
+  return sales.filter((sale) => {
+    const createdAt = Date.parse(sale.createdAt)
+    if (!Number.isFinite(createdAt)) throw new Error(`Sale "${sale.id}" has an invalid creation date and cannot be included in current-stock calculations.`)
+    return createdAt >= trackingStartedAt
+  })
+}
+
+const stockSalesCache = createReadCache(loadCloudStockSalesRecords)
+
+export function getCloudStockSalesRecords() {
+  return stockSalesCache.get()
 }
 
 export async function getNextInvoiceId(saleDate: string) {
@@ -307,6 +503,8 @@ export async function migrateLegacySaleIds(): Promise<number> {
     migrated += 1
   }
 
+  salesCache.invalidate()
+  stockSalesCache.invalidate()
   return migrated
 }
 
@@ -343,12 +541,34 @@ export async function saveCloudSale(sale: SaleRecord) {
     }))
   )
   if (productsError) throw productsError
+  salesCache.invalidate()
+  stockSalesCache.invalidate()
+  void syncSaleToAI(sale)
 }
 
 export async function deleteCloudSale(id: string) {
   const client = requireSupabase()
   const { error } = await client.from('sales').delete().eq('id', id)
   if (error) throw error
+  salesCache.invalidate()
+  stockSalesCache.invalidate()
+  void deleteSaleFromAI(id)
+}
+
+export async function markCloudSalePaid(sale: Pick<SaleRecord, 'id' | 'grandTotal'>) {
+  const client = requireSupabase()
+  const { error } = await client
+    .from('sales')
+    .update({
+      payment_status: 'Paid',
+      amount_paid: sale.grandTotal,
+      remaining: 0
+    })
+    .eq('id', sale.id)
+  if (error) throw error
+  salesCache.invalidate()
+  stockSalesCache.invalidate()
+  void markSalePaidInAI(sale.id)
 }
 
 function toOrderQuery(row: Record<string, unknown>, products: OrderQuery['products']): OrderQuery {
@@ -372,7 +592,7 @@ function toOrderQuery(row: Record<string, unknown>, products: OrderQuery['produc
   }
 }
 
-export async function getCloudOrderQueries(): Promise<OrderQuery[]> {
+async function loadCloudOrderQueries(): Promise<OrderQuery[]> {
   const client = requireSupabase()
   const [{ data: orders, error }, { data: products, error: productsError }] = await Promise.all([
     client.from('order_queries').select('*').order('created_at', { ascending: false }),
@@ -387,6 +607,12 @@ export async function getCloudOrderQueries(): Promise<OrderQuery[]> {
     purchaseCost: Number(item.purchase_cost || 0),
     selling: Number(item.selling || 0)
   }))))
+}
+
+const orderQueryCache = createReadCache(loadCloudOrderQueries)
+
+export function getCloudOrderQueries() {
+  return orderQueryCache.get()
 }
 
 export async function saveCloudOrderQuery(order: OrderQuery) {
@@ -408,15 +634,19 @@ export async function saveCloudOrderQuery(order: OrderQuery) {
     product_name: product.name, quantity: product.quantity, purchase_cost: product.purchaseCost, selling: product.selling
   })))
   if (productsError) throw productsError
+  orderQueryCache.invalidate()
+  void syncOrderToAI(order)
 }
 
 export async function deleteCloudOrderQuery(id: string) {
   const client = requireSupabase()
   const { error } = await client.from('order_queries').delete().eq('id', id)
   if (error) throw error
+  orderQueryCache.invalidate()
+  void deleteOrderFromAI(id)
 }
 
-export async function getCloudBusinessExpenses(): Promise<BusinessExpense[]> {
+async function loadCloudBusinessExpenses(): Promise<BusinessExpense[]> {
   const client = requireSupabase()
   const { data, error } = await client.from('business_expenses').select('*').order('date', { ascending: false })
   if (error) throw error
@@ -427,6 +657,12 @@ export async function getCloudBusinessExpenses(): Promise<BusinessExpense[]> {
   }))
 }
 
+const businessExpenseCache = createReadCache(loadCloudBusinessExpenses)
+
+export function getCloudBusinessExpenses() {
+  return businessExpenseCache.get()
+}
+
 export async function saveCloudBusinessExpense(expense: BusinessExpense) {
   const client = requireSupabase()
   const { error } = await client.from('business_expenses').upsert({
@@ -434,10 +670,14 @@ export async function saveCloudBusinessExpense(expense: BusinessExpense) {
     amount: expense.amount, note: expense.note, created_at: expense.createdAt
   })
   if (error) throw error
+  businessExpenseCache.invalidate()
+  void syncExpenseToAI(expense)
 }
 
 export async function deleteCloudBusinessExpense(id: string) {
   const client = requireSupabase()
   const { error } = await client.from('business_expenses').delete().eq('id', id)
   if (error) throw error
+  businessExpenseCache.invalidate()
+  void deleteExpenseFromAI(id)
 }

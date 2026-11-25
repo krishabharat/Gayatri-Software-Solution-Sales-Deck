@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import ProductRow from './ProductRow'
-import { describeCloudError, getCloudCustomers, getCloudInventoryItems, getCloudSalesRecords, getNextInvoiceId, saveCloudInventoryItem, saveCloudSale } from '../../utils/cloudStorage'
-import { type Customer, type InventoryItem, type SaleRecord } from '../../utils/storage'
+import { describeCloudError, getCloudCustomers, getCloudInventoryItems, getCloudProductMasterItems, getCloudSalesRecords, getNextInvoiceId, saveCloudSale } from '../../utils/cloudStorage'
+import { type Customer, type InventoryItem, type ProductMasterItem, type SaleRecord } from '../../utils/storage'
 
 type Product = {
   id?: string
@@ -20,11 +20,13 @@ export default function SaleForm() {
   const editingId = searchParams.get('id')
   const isEditing = Boolean(editingId)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [productMasters, setProductMasters] = useState<ProductMasterItem[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [customerName, setCustomerName] = useState('')
   const [mobile, setMobile] = useState('')
   const [saleDate, setSaleDate] = useState('')
+  const [createdAt, setCreatedAt] = useState('')
   const [paymentStatus, setPaymentStatus] = useState<(typeof paymentOptions)[number]>('Unpaid')
   const [amountPaid, setAmountPaid] = useState(0)
   const [discount, setDiscount] = useState(0)
@@ -33,15 +35,17 @@ export default function SaleForm() {
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    Promise.all([getCloudInventoryItems(), getCloudCustomers(), editingId ? getCloudSalesRecords() : Promise.resolve([] as SaleRecord[])])
-      .then(([inventory, loadedCustomers, sales]) => {
+    Promise.all([getCloudInventoryItems(), getCloudCustomers(), editingId ? getCloudSalesRecords() : Promise.resolve([] as SaleRecord[]), getCloudProductMasterItems()])
+      .then(([inventory, loadedCustomers, sales, loadedProducts]) => {
         setInventoryItems(inventory)
         setCustomers(loadedCustomers)
+        setProductMasters(loadedProducts)
         const sale = sales.find((record) => record.id === editingId)
         if (!sale) return
         setCustomerName(sale.customerName || '')
         setMobile(sale.mobile || '')
         setSaleDate(sale.saleDate || '')
+        setCreatedAt(sale.createdAt)
         setPaymentStatus(sale.paymentStatus || 'Unpaid')
         setAmountPaid(Number(sale.amountPaid || 0))
         setDiscount(Number(sale.discount || 0))
@@ -54,7 +58,7 @@ export default function SaleForm() {
   const maxProducts = 8
 
   const inventoryOptions = useMemo(() => {
-    const unique = new Map<string, { id: string; name: string; purchaseCost: number; selling: number }>()
+    const unique = new Map<string, { id: string; name: string; unit: string; purchaseCost: number; selling: number }>()
 
     inventoryItems.forEach((item) => {
       const itemId = String(item.productId || '').trim()
@@ -67,6 +71,7 @@ export default function SaleForm() {
         unique.set(key, {
           id: itemId || itemName,
           name: itemName || itemId || 'Unnamed product',
+          unit: productMasters.find((product) => product.productId.trim().toLocaleLowerCase() === key.toLocaleLowerCase())?.unit || 'Sheet',
           purchaseCost: Number(item.costPerSheet || 0),
           selling: Number(item.sellingCost || item.costPerSheet || 0)
         })
@@ -74,7 +79,7 @@ export default function SaleForm() {
     })
 
     return Array.from(unique.values())
-  }, [inventoryItems])
+  }, [inventoryItems, productMasters])
 
   const totals = useMemo(() => {
     const totalPlates = products.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -99,7 +104,7 @@ export default function SaleForm() {
     setProducts((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== index) : prev))
   }
 
-  const handleSelectInventory = (index: number, option: { id: string; name: string; purchaseCost: number; selling: number }) => {
+  const handleSelectInventory = (index: number, option: { id: string; name: string; unit: string; purchaseCost: number; selling: number }) => {
     updateProduct(index, {
       id: option.id,
       name: option.name,
@@ -127,30 +132,6 @@ export default function SaleForm() {
           selling: Number(product.selling) || 0
         }))
 
-      const inventory = await getCloudInventoryItems()
-      const currentSales = await getCloudSalesRecords()
-      const currentSale = editingId ? currentSales.find((record) => record.id === editingId) : null
-
-      const adjustedInventory = inventory.map((item) => {
-        let currentQuantity = Number(item.quantity || 0)
-
-        if (currentSale) {
-          currentSale.products.forEach((product) => {
-            const matchesId = item.productId && product.id && item.productId.toLowerCase() === product.id.toLowerCase()
-            const matchesName = !matchesId && item.productName && product.name && item.productName.toLowerCase() === product.name.toLowerCase()
-            if (matchesId || matchesName) currentQuantity += Number(product.quantity || 0)
-          })
-        }
-
-        validProducts.forEach((product) => {
-          const matchesId = item.productId && product.id && item.productId.toLowerCase() === product.id.toLowerCase()
-          const matchesName = !matchesId && item.productName && product.name && item.productName.toLowerCase() === product.name.toLowerCase()
-          if (matchesId || matchesName) currentQuantity = Math.max(0, currentQuantity - Number(product.quantity || 0))
-        })
-
-        return { ...item, quantity: currentQuantity }
-      })
-
       const saleRecord: SaleRecord = {
         id: editingId || await getNextInvoiceId(saleDate),
         customerName,
@@ -164,11 +145,9 @@ export default function SaleForm() {
         subtotal: totals.subtotal,
         grandTotal: totals.grandTotal,
         remaining: totals.remaining,
-        createdAt: new Date().toISOString()
+        createdAt: createdAt || new Date().toISOString()
       }
-
       await saveCloudSale(saleRecord)
-      await Promise.all(adjustedInventory.map((item) => saveCloudInventoryItem(item)))
       navigate('/sales')
     } catch (saveError) {
       setError(describeCloudError(saveError, 'Unable to save sale.'))

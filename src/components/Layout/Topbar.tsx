@@ -1,18 +1,19 @@
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useState } from 'react'
 
 const titleMap: Record<string, string> = {
   '/home': 'Business Overview',
-  '/sales': 'Sales',
-  '/sales/new': 'New Sale',
-  '/inventory': 'Inventory',
-  '/inventory/add': 'Add Inventory',
-  '/inventory/product-master': 'Product Master',
-  '/reports': 'Reports',
-  '/orders': 'User Query / Orders',
+  '/ai-chat': 'AI Chart & Gemini Intelligence',
+  '/sales': 'Sales Management',
+  '/sales/new': 'New Sale Invoice',
+  '/inventory': 'Inventory Control',
+  '/inventory/add': 'Add Stock Intake',
+  '/inventory/product-master': 'Product Master Catalog',
+  '/reports': 'Performance Reports',
+  '/orders': 'Customer Queries & Orders',
   '/expenses': 'Business Expenses',
-  '/customers': 'Customers',
-  '/suppliers': 'Suppliers'
+  '/customers': 'Customer Directory',
+  '/suppliers': 'Supplier Directory'
 }
 
 export default function Topbar() {
@@ -33,30 +34,42 @@ export default function Topbar() {
   }
 
   return (
-    <header className="border-b border-[#dce8e3] bg-white/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
+    <header className="border-b border-[#E6D7C3] bg-[#FFFDF9] px-4 py-3.5 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <img src="/brand-mark.svg" alt="Sai Gayatri Industries logo" className="h-11 w-11 rounded-2xl shadow-sm" />
+          <img src="/brand-mark.png" alt="Sai Gayatri logo" className="h-10 w-10 object-contain md:hidden" />
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#688078]">SAI GAYATRI INDUSTRIES · OPERATIONS</div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-slate-800">
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#B46528]">
+              SAI GAYATRI INDUSTRIES · OPERATIONS
+            </div>
+            <h1 className="text-xl font-extrabold tracking-tight text-[#2B1810]">
               {titleMap[location.pathname] || 'Business Overview'}
             </h1>
-            <div className="mt-1 text-sm text-slate-500">{today}</div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <form onSubmit={submitSearch} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#dce8e3] bg-[#f7faf8] px-2 py-2 sm:px-3">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
+          <div className="hidden rounded-lg border border-[#E6D7C3] bg-[#FAF5EE] px-2.5 py-1 text-xs font-semibold text-[#6F452B] md:block">
+            {today}
+          </div>
+
+          <Link
+            to="/ai-chat"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#5C3317] to-[#B46528] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#4A2811] hover:to-[#9B521D]"
+          >
+            <span>✨</span>
+            <span>AI Chart</span>
+          </Link>
+
+          <form onSubmit={submitSearch} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#D9C3A8] bg-[#FAF5EE] px-3 py-1.5 focus-within:border-[#B46528] focus-within:bg-white">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5 text-[#7A5C48]"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
             <input
-              placeholder="Search customer, mobile, invoice..."
+              placeholder="Search customer, invoice..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-24 min-w-0 border-0 bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 sm:w-40 sm:text-sm"
+              className="w-28 min-w-0 border-0 bg-transparent text-xs font-medium text-[#2B1810] outline-none placeholder:text-[#A38773] sm:w-44"
             />
           </form>
-
         </div>
       </div>
     </header>

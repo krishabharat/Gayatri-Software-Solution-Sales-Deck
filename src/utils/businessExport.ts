@@ -174,11 +174,159 @@ export type BusinessExportData = {
   products: ProductMasterItem[]
 }
 
+export type MonthlyReportWorkbookData = {
+  month: string
+  sales: SaleRecord[]
+  inventory: InventoryItem[]
+  expenses: BusinessExpense[]
+  currentStock: Array<{ productId: string; productName: string; unit: string; quantity: number; averageCost: number }>
+}
+
+export function downloadInventoryStockHistoryWorkbook(
+  records: InventoryItem[],
+  products: Array<Pick<ProductMasterItem, 'productId' | 'productName' | 'unit'> & { stockOnHand: number }>
+) {
+  const orderedRecords = [...records].sort((left, right) =>
+    left.date.localeCompare(right.date) ||
+    left.productName.localeCompare(right.productName, undefined, { sensitivity: 'base' }) ||
+    String(left.createdAt || '').localeCompare(String(right.createdAt || ''))
+  )
+  const productSummary = [...products].sort((left, right) =>
+    left.productName.localeCompare(right.productName, undefined, { sensitivity: 'base' })
+  )
+  const totalCost = orderedRecords.reduce((sum, item) => sum + Number(item.totalCost || 0), 0)
+  const rows: Cell[][] = [
+    ['SAI GAYATRI INDUSTRIES', 'Complete Inventory Stock History'],
+    ['Products', productSummary.length, 'Stock Receipts', orderedRecords.length, 'Total Recorded Cost', totalCost],
+    [],
+    ['Date', 'Product ID', 'Product Name', 'Unit', 'Receipt Reference', 'Supplier', 'Type', 'Quantity Received', 'Cost / Unit', 'Selling Price / Unit', 'Material Cost', 'Transport Cost', 'Total Cost', 'Notes'],
+    ...orderedRecords.map((item) => {
+      const product = productSummary.find((entry) =>
+        (item.productId && entry.productId.trim().toLocaleLowerCase() === item.productId.trim().toLocaleLowerCase()) ||
+        (!item.productId && entry.productName.trim().toLocaleLowerCase() === item.productName.trim().toLocaleLowerCase())
+      )
+      return [
+        item.date, item.productId, item.productName, product?.unit || 'Sheet',
+        item.intakeBatchId || item.id, item.supplierName || '', item.type,
+        item.quantity, item.costPerSheet, item.sellingCost, item.materialCost,
+        item.transportCost, item.totalCost, item.notes || ''
+      ]
+    })
+  ]
+  const summaryRows: Cell[][] = [
+    ['Product ID', 'Product Name', 'Unit', 'Current Stock'],
+    ...productSummary.map((product) => [product.productId, product.productName, product.unit, product.stockOnHand])
+  ]
+  const workbook = zipSync(workbookFiles([
+    { name: 'All Stock History', rows },
+    { name: 'Current Stock by Product', rows: summaryRows }
+  ]), { level: 6 })
+  const dateStamp = new Date().toISOString().slice(0, 10)
+  downloadFile(
+    `Sai-Gayatri-Complete-Inventory-History-${dateStamp}.xlsx`,
+    new Blob([workbook], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  )
+}
+
 export function downloadBusinessWorkbook(data: BusinessExportData) {
   const workbook = zipSync(workbookFiles(createSheets(data)), { level: 6 })
   const dateStamp = new Date().toISOString().slice(0, 10).replaceAll('-', '')
   downloadFile(
     `Sai-Gayatri-Industries-Backup-${dateStamp}.xlsx`,
+    new Blob([workbook], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  )
+}
+
+export function downloadMonthlyReportWorkbook(data: MonthlyReportWorkbookData) {
+  const revenue = data.sales.reduce((sum, sale) => sum + sale.grandTotal, 0)
+  const totalPlates = data.sales.reduce((sum, sale) => sum + sale.totalPlates, 0)
+  const productCost = data.sales.reduce(
+    (sum, sale) => sum + sale.products.reduce((saleCost, product) => saleCost + product.quantity * product.purchaseCost, 0),
+    0
+  )
+  const expenses = data.expenses.reduce((sum, expense) => sum + expense.amount, 0)
+  const received = data.inventory.reduce((sum, item) => sum + item.quantity, 0)
+  const purchaseCost = data.inventory.reduce((sum, item) => sum + item.totalCost, 0)
+  const transportCost = data.inventory.reduce((sum, item) => sum + item.transportCost, 0)
+  const estimatedStockValue = data.currentStock.reduce((sum, item) => sum + item.quantity * item.averageCost, 0)
+  const salesSummary: Cell[][] = [[
+    'Invoice ID', 'Sale Date', 'Customer', 'Mobile', 'Products', 'Total Plates',
+    'Subtotal', 'Discount', 'Revenue', 'Amount Paid', 'Remaining', 'Payment Status',
+    'Product Cost', 'Estimated Profit'
+  ]]
+  const salesDetails: Cell[][] = [[
+    'Invoice ID', 'Sale Date', 'Customer', 'Product ID', 'Product Name', 'Quantity',
+    'Selling Price / Unit', 'Gross Line Total', 'Allocated Discount', 'Net Revenue',
+    'Product Cost', 'Estimated Profit'
+  ]]
+  for (const sale of data.sales) {
+    const productCost = sale.products.reduce((sum, product) => sum + product.quantity * product.purchaseCost, 0)
+    salesSummary.push([
+      sale.id, sale.saleDate, sale.customerName, sale.mobile,
+      sale.products.map((product) => product.name).join(', '), sale.totalPlates,
+      sale.subtotal, sale.discount, sale.grandTotal, sale.amountPaid, sale.remaining,
+      sale.paymentStatus, productCost, sale.grandTotal - productCost
+    ])
+    for (const product of sale.products) {
+      const grossLineTotal = product.quantity * product.selling
+      const allocatedDiscount = sale.subtotal > 0 ? sale.discount * grossLineTotal / sale.subtotal : 0
+      const netRevenue = grossLineTotal - allocatedDiscount
+      const lineCost = product.quantity * product.purchaseCost
+      salesDetails.push([
+        sale.id, sale.saleDate, sale.customerName, product.id, product.name, product.quantity,
+        product.selling, grossLineTotal, allocatedDiscount, netRevenue, lineCost, netRevenue - lineCost
+      ])
+    }
+  }
+  const workbook = zipSync(workbookFiles([
+    {
+      name: 'Monthly Summary',
+      rows: [
+        ['SAI GAYATRI INDUSTRIES', `Monthly Report ${data.month}`],
+        ['Metric', 'Value'],
+        ['Sales invoices', data.sales.length],
+        ['Plates sold', totalPlates],
+        ['Sales revenue', revenue],
+        ['Product cost of sales', productCost],
+        ['Business expenses', expenses],
+        ['Estimated profit', revenue - productCost - expenses],
+        ['Stock received', received],
+        ['Purchase cost of receipts', purchaseCost],
+        ['Transport cost of receipts', transportCost],
+        ['Current stock on hand', data.currentStock.reduce((sum, item) => sum + item.quantity, 0)],
+        ['Estimated current stock value', estimatedStockValue]
+      ]
+    },
+    { name: 'Monthly Sales', rows: salesSummary },
+    { name: 'Sales Product Detail', rows: salesDetails },
+    {
+      name: 'Monthly Inventory In',
+      rows: [
+        ['Receipt ID', 'Date', 'Product ID', 'Product Name', 'Supplier', 'Quantity Received', 'Cost / Unit', 'Material Cost', 'Transport Cost', 'Total Cost', 'Type', 'Notes'],
+        ...data.inventory.map((item) => [
+          item.id, item.date, item.productId, item.productName, item.supplierName || '',
+          item.quantity, item.costPerSheet, item.materialCost, item.transportCost,
+          item.totalCost, item.type, item.notes || ''
+        ])
+      ]
+    },
+    {
+      name: 'Current Stock',
+      rows: [
+        ['Product ID', 'Product Name', 'On Hand', 'Unit'],
+        ...data.currentStock.map((item) => [item.productId, item.productName, item.quantity, item.unit])
+      ]
+    },
+    {
+      name: 'Monthly Expenses',
+      rows: [
+        ['Date', 'Category', 'Amount', 'Note'],
+        ...data.expenses.map((expense) => [expense.date, expense.category, expense.amount, expense.note])
+      ]
+    }
+  ]), { level: 6 })
+  downloadFile(
+    `Sai-Gayatri-Industries-Monthly-Report-${data.month}.xlsx`,
     new Blob([workbook], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   )
 }

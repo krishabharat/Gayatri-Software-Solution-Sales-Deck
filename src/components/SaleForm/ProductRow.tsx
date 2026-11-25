@@ -9,6 +9,7 @@ type Product = {
 type InventoryOption = {
   id: string
   name: string
+  unit: string
   purchaseCost: number
   selling: number
 }
@@ -24,6 +25,7 @@ type Props = {
 
 export default function ProductRow({ index, product, inventoryOptions, onChange, onRemove, onSelectInventory }: Props) {
   const total = (Number(product.quantity) || 0) * (Number(product.selling) || 0)
+  const unit = inventoryOptions.find((option) => option.id === product.id)?.unit || 'unit'
 
   return (
     <div className="rounded-2xl border border-[#e3efec] bg-[#f9fffd] p-4">
@@ -69,17 +71,17 @@ export default function ProductRow({ index, product, inventoryOptions, onChange,
         </div>
 
         <div>
-          <label className="form-label">Quantity / Total Plates</label>
+          <label className="form-label">Quantity ({unit})</label>
           <input type="number" min={0} value={product.quantity ?? ''} onChange={(e) => onChange(index, { quantity: Number(e.target.value) })} className="form-input" placeholder="0" />
         </div>
 
         <div>
-          <label className="form-label">Purchase Cost</label>
+          <label className="form-label">Purchase Cost / {unit}</label>
           <input type="number" min={0} step="0.01" value={product.purchaseCost ?? ''} onChange={(e) => onChange(index, { purchaseCost: Number(e.target.value) })} className="form-input" placeholder="₹0" />
         </div>
 
         <div>
-          <label className="form-label">Selling Cost</label>
+          <label className="form-label">Selling Price / {unit}</label>
           <input type="number" min={0} step="0.01" value={product.selling ?? ''} onChange={(e) => onChange(index, { selling: Number(e.target.value) })} className="form-input" placeholder="₹0" />
         </div>
 
