@@ -1,7 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-async function callGemini(apiKey: string, prompt: string): Promise<{ text: string; model: string } | null> {
-  const models = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.8-flash']
+async function callGemini(
+  apiKey: string,
+  prompt: string
+): Promise<{ text: string; model: string; error?: string }> {
+  const models = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-3.1-flash-lite'
+  ]
+  let lastError = 'Unknown error'
   for (const model of models) {
     try {
       const resp = await fetch(
@@ -19,12 +28,16 @@ async function callGemini(apiKey: string, prompt: string): Promise<{ text: strin
         const data: any = await resp.json()
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
         if (text) return { text, model }
+        lastError = `${model}: empty response`
+      } else {
+        const errText = await resp.text().catch(() => '')
+        lastError = `${model} (${resp.status}): ${errText.slice(0, 140)}`
       }
-    } catch {
-      // Try next model
+    } catch (err: any) {
+      lastError = `${model}: ${err?.message || 'network error'}`
     }
   }
-  return null
+  return { text: '', model: '', error: lastError }
 }
 
 export default async function handler(req: any, res: any) {
@@ -39,7 +52,7 @@ export default async function handler(req: any, res: any) {
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL || ''
   const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || ''
-  const geminiKey = process.env.GEMINI_API_KEY || ''
+  const geminiKey = process.env.GEMINI_API_KEY || String(req.body?.gemini_api_key || '').trim()
 
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({ error: 'Supabase environment variables are not configured on Vercel.' })
@@ -121,6 +134,7 @@ export default async function handler(req: any, res: any) {
       order_queries: orders
     }
 
+    let geminiError = ''
     if (geminiKey) {
       const prompt = `You are the AI Business Intelligence Assistant for Sai Gayatri Industries (a paper & leaf plate factory). Currency is Indian Rupees (₹).
 Here is the LIVE Supabase database snapshot in JSON:
@@ -146,7 +160,7 @@ Analyze the live data accurately and return ONLY a valid JSON object (no markdow
 If no table or chart is needed, set columns: [], rows: [], chart: null. Never invent data not present in the JSON.`
 
       const aiRes = await callGemini(geminiKey, prompt)
-      if (aiRes) {
+      if (aiRes.text) {
         const cleaned = aiRes.text.replace(/^```(?:json)?\s*|\s*```$/gm, '').trim()
         try {
           const parsed = JSON.parse(cleaned)
@@ -171,11 +185,15 @@ If no table or chart is needed, set columns: [], rows: [], chart: null. Never in
           })
         }
       }
+      geminiError = aiRes.error || 'Gemini returned empty response'
     }
 
     // Fallback summary if GEMINI_API_KEY is missing or temporarily unavailable
+    const reasonNote = geminiKey
+      ? `Gemini API issue: ${geminiError}`
+      : 'Add GEMINI_API_KEY in Vercel Environment Variables to enable full Gemini reasoning.'
     return res.status(200).json({
-      answer: `Live Supabase Summary: ${liveContext.summary.total_invoices} invoices, Total Revenue ₹${liveContext.summary.total_revenue.toLocaleString()}, Pending Due ₹${liveContext.summary.total_pending_due.toLocaleString()}, Expenses ₹${liveContext.summary.total_expenses.toLocaleString()}. (Add GEMINI_API_KEY in Vercel Environment Variables to enable full Gemini reasoning.)`,
+      answer: `Live Supabase Summary: ${liveContext.summary.total_invoices} invoices, Total Revenue ₹${liveContext.summary.total_revenue.toLocaleString()}, Pending Due ₹${liveContext.summary.total_pending_due.toLocaleString()}, Expenses ₹${liveContext.summary.total_expenses.toLocaleString()}. (${reasonNote})`,
       engine: 'vercel-supabase-fallback',
       type: 'kpi',
       metrics: [
