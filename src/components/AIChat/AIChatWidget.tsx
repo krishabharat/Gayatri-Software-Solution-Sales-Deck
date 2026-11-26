@@ -839,8 +839,8 @@ export default function AIChatWidget({ inline = false }: { inline?: boolean }) {
 
   if (inline) {
     return (
-      <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-        <div className={expandedTable ? 'h-[760px]' : 'h-[600px]'}>
+      <div className="w-full rounded-2xl border border-[#E6D7C3] bg-white shadow-sm overflow-hidden">
+        <div className={expandedTable ? 'h-[760px]' : 'h-[calc(100dvh-230px)] min-h-[460px] md:h-[640px]'}>
           {chatContent}
         </div>
       </div>
