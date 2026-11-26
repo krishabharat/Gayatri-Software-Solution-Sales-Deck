@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { AIChatBotIcon, InventoryCycleIcon, SalesTagIcon } from '../Icons/AppIcons'
 
 const navItems = [
   { to: '/home', label: 'HOME', icon: 'home' },
@@ -16,17 +17,11 @@ const iconMap: Record<string, React.ReactNode> = {
   home: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-7H9v7H5a1 1 0 0 1-1-1v-8.5Z" /></svg>
   ),
-  aichat: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M12 3c-4.97 0-9 3.58-9 8 0 2.2 1 4.19 2.62 5.61L5 21l4.78-1.59c.7.19 1.44.29 2.22.29 4.97 0 9-3.58 9-8s-4.03-8-9-8z" /><circle cx="8.5" cy="11.5" r="1" fill="currentColor" /><circle cx="12" cy="11.5" r="1" fill="currentColor" /><circle cx="15.5" cy="11.5" r="1" fill="currentColor" /></svg>
-  ),
+  aichat: <AIChatBotIcon className="h-4 w-4" />,
   customers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><circle cx="9" cy="8" r="3" /><path d="M3 19a6 6 0 0 1 12 0M16 11a3 3 0 0 1 5 2.2M17 19h4" /></svg>,
   suppliers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M4 8h16v12H4zM7 8V5h10v3M8 12h8M8 16h5" /></svg>,
-  sales: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M6 7.5h12M6 12h12M6 16.5h8" /><path d="M18 16.5h.01" /></svg>
-  ),
-  inventory: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M4 8.5 12 4l8 4.5-8 4.5-8-4.5Zm0 3 8 4.5 8-4.5M4 15l8 4.5 8-4.5" /></svg>
-  ),
+  sales: <SalesTagIcon className="h-4 w-4" />,
+  inventory: <InventoryCycleIcon className="h-4 w-4" />,
   reports: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4"><path d="M5 19V9m7 10V5m7 14v-8" /></svg>
   ),

@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useState } from 'react'
+import { AIChatBotIcon, InventoryCycleIcon, SalesTagIcon } from '../Icons/AppIcons'
 
 const titleMap: Record<string, string> = {
   '/home': 'Business Overview',
@@ -17,14 +18,19 @@ const titleMap: Record<string, string> = {
   '/suppliers': 'Suppliers'
 }
 
-const mobileQuickIcons = [
-  { to: '/sales', label: 'Sales', icon: '🧾', match: ['/sales', '/sales/new'] },
-  { to: '/customers', label: 'Users', icon: '👤', match: ['/customers', '/suppliers'] },
-  { to: '/inventory', label: 'Inventory', icon: '📦', match: ['/inventory', '/inventory/add', '/inventory/product-master'] },
-  { to: '/expenses', label: 'Expenses', icon: '💸', match: ['/expenses'] },
-  { to: '/orders', label: 'Queries', icon: '📋', match: ['/orders'] },
-  { to: '/ai-chat', label: 'AI', icon: '✨', match: ['/ai-chat'] },
-  { to: '/reports', label: 'Reports', icon: '📊', match: ['/reports'] }
+const mobileQuickIcons: Array<{
+  to: string
+  label: string
+  icon: React.ReactNode
+  match: string[]
+}> = [
+  { to: '/sales', label: 'Sales', icon: <SalesTagIcon className="h-4 w-4" />, match: ['/sales', '/sales/new'] },
+  { to: '/customers', label: 'Users', icon: <span className="text-sm leading-none">👤</span>, match: ['/customers', '/suppliers'] },
+  { to: '/inventory', label: 'Inventory', icon: <InventoryCycleIcon className="h-4 w-4" />, match: ['/inventory', '/inventory/add', '/inventory/product-master'] },
+  { to: '/expenses', label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, match: ['/expenses'] },
+  { to: '/orders', label: 'Queries', icon: <span className="text-sm leading-none">📋</span>, match: ['/orders'] },
+  { to: '/ai-chat', label: 'AI', icon: <AIChatBotIcon className="h-4 w-4" />, match: ['/ai-chat'] },
+  { to: '/reports', label: 'Reports', icon: <span className="text-sm leading-none">📊</span>, match: ['/reports'] }
 ]
 
 export default function Topbar() {
@@ -131,7 +137,7 @@ export default function Topbar() {
                   : 'border-[#E6D7C3] bg-white text-[#5C3317]'
               }`}
             >
-              <span className="text-base leading-none">{item.icon}</span>
+              <span className="flex h-5 w-5 items-center justify-center">{item.icon}</span>
               <span className="text-[10px] font-bold tracking-wide">{item.label}</span>
             </Link>
           )
