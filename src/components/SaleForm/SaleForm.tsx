@@ -286,12 +286,17 @@ export default function SaleForm() {
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-24 z-[60] border-t border-[#eadff2] bg-white/95 p-3 shadow-[0_-12px_30px_rgba(52,31,63,0.12)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:shadow-none">
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 sm:flex-row sm:justify-end">
-        <button type="button" className="secondary-btn" onClick={() => navigate('/sales')}>Cancel</button>
-        <button type="submit" disabled={!canSave || isSaving} className={`primary-btn ${!canSave || isSaving ? 'cursor-not-allowed opacity-60' : ''}`}>
-          {isSaving ? 'SAVING...' : isEditing ? 'UPDATE SALE' : 'SAVE SALE'}
-        </button>
+      <div className="rounded-2xl border border-[#E6D7C3] bg-[#FFFDF9] p-4 shadow-xs">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs font-semibold text-[#6F452B]">
+            Review totals above &rarr; <strong className="text-[#2B1810]">₹{totals.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong> ({paymentStatus})
+          </div>
+          <div className="flex flex-col gap-2.5 sm:flex-row">
+            <button type="button" className="secondary-btn" onClick={() => navigate('/sales')}>Cancel</button>
+            <button type="submit" disabled={!canSave || isSaving} className={`primary-btn ${!canSave || isSaving ? 'cursor-not-allowed opacity-60' : ''}`}>
+              {isSaving ? 'SAVING...' : isEditing ? 'UPDATE SALE' : '✓ CONFIRM & SAVE SALE'}
+            </button>
+          </div>
         </div>
       </div>
     </form>
