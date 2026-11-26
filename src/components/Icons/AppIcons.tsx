@@ -50,3 +50,35 @@ export function AIChatBotIcon({ className = 'h-5 w-5' }: { className?: string })
     </svg>
   )
 }
+
+export function UserOutlineIcon({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M5.2 19.5a7.2 7.2 0 0 1 13.6 0" />
+    </svg>
+  )
+}
+
+export function FinanceCycleIcon({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {/* Circular arrows */}
+      <path d="M5 10.5A7.5 7.5 0 0 1 18.2 7.2" />
+      <path d="M18.8 4.2v3.3h-3.3" />
+      <path d="M19 13.5A7.5 7.5 0 0 1 5.8 16.8" />
+      <path d="M5.2 19.8v-3.3h3.3" />
+      {/* Dollar / Currency sign */}
+      <path d="M12 7.5v9" />
+      <path d="M14.2 9.5a2.1 2.1 0 0 0-2.2-1.3c-1.3 0-2.2.7-2.2 1.7 0 1 .9 1.5 2.2 1.8 1.3.3 2.3.8 2.3 1.9s-1 1.9-2.3 1.9a2.2 2.2 0 0 1-2.3-1.4" />
+    </svg>
+  )
+}
+
+export function QuickAccessIcon({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M13 2 4.5 13.5H12L11 22l8.5-11.5H12L13 2Z" />
+    </svg>
+  )
+}

@@ -1,6 +1,6 @@
 import { useLocation, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useState } from 'react'
-import { AIChatBotIcon, InventoryCycleIcon, SalesTagIcon } from '../Icons/AppIcons'
+import { AIChatBotIcon, FinanceCycleIcon, InventoryCycleIcon, SalesTagIcon, UserOutlineIcon } from '../Icons/AppIcons'
 
 const titleMap: Record<string, string> = {
   '/home': 'Business Overview',
@@ -25,9 +25,9 @@ const mobileQuickIcons: Array<{
   match: string[]
 }> = [
   { to: '/sales', label: 'Sales', icon: <SalesTagIcon className="h-4 w-4" />, match: ['/sales', '/sales/new'] },
-  { to: '/customers', label: 'Users', icon: <span className="text-sm leading-none">👤</span>, match: ['/customers', '/suppliers'] },
+  { to: '/customers', label: 'Users', icon: <UserOutlineIcon className="h-4 w-4" />, match: ['/customers', '/suppliers'] },
   { to: '/inventory', label: 'Inventory', icon: <InventoryCycleIcon className="h-4 w-4" />, match: ['/inventory', '/inventory/add', '/inventory/product-master'] },
-  { to: '/expenses', label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, match: ['/expenses'] },
+  { to: '/expenses', label: 'Finance', icon: <FinanceCycleIcon className="h-4 w-4" />, match: ['/expenses'] },
   { to: '/orders', label: 'Queries', icon: <span className="text-sm leading-none">📋</span>, match: ['/orders'] },
   { to: '/ai-chat', label: 'AI', icon: <AIChatBotIcon className="h-4 w-4" />, match: ['/ai-chat'] },
   { to: '/reports', label: 'Reports', icon: <span className="text-sm leading-none">📊</span>, match: ['/reports'] }
